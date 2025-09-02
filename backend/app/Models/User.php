@@ -6,7 +6,6 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
-// use Spatie\Permission\Traits\HasRoles;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use App\Models\Role;
@@ -16,23 +15,24 @@ class User extends Authenticatable
     use HasFactory, Notifiable, HasApiTokens;
 
     protected $fillable = [
-        'name',
+        'nom',
+        'prenom',
         'email',
-        'phone',
-        'password',
-        'is_active',
-        'last_login_at',
+        'MotDePasse',
+        'Telephone',
+        'adresse',
+        'role',
+        'statut',
     ];
 
     protected $hidden = [
-        'password',
+        'MotDePasse',
         'remember_token',
     ];
 
     protected $casts = [
-        'email_verified_at' => 'datetime',
-        'last_login_at' => 'datetime',
-        'is_active' => 'boolean',
+        'created_at' => 'datetime',
+        'updated_at' => 'datetime',
     ];
 
     /**
@@ -104,7 +104,7 @@ class User extends Authenticatable
      */
     public function hasRole($role): bool
     {
-        return $this->roles()->where('name', $role)->exists();
+        return $this->role === $role;
     }
 
     /**
@@ -156,19 +156,11 @@ class User extends Authenticatable
     }
 
     /**
-     * Mettre à jour la date de dernière connexion
-     */
-    public function updateLastLogin(): void
-    {
-        $this->update(['last_login_at' => now()]);
-    }
-
-    /**
      * Activer l'utilisateur
      */
     public function activate(): void
     {
-        $this->update(['is_active' => true]);
+        $this->update(['statut' => 'actif']);
     }
 
     /**
@@ -176,6 +168,6 @@ class User extends Authenticatable
      */
     public function deactivate(): void
     {
-        $this->update(['is_active' => false]);
+        $this->update(['statut' => 'inactif']);
     }
 }

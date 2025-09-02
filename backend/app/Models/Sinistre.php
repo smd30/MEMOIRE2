@@ -13,6 +13,7 @@ class Sinistre extends Model
     protected $table = 'sinistres';
 
     protected $fillable = [
+        'sinistre_number',
         'contract_id',
         'user_id',
         'managed_by',

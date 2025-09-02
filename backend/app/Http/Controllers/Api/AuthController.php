@@ -20,9 +20,12 @@ class AuthController extends Controller
     public function register(Request $request): JsonResponse
     {
         $validator = Validator::make($request->all(), [
-            'name' => 'required|string|max:255',
+            'nom' => 'required|string|max:255',
+            'prenom' => 'required|string|max:255',
             'email' => 'required|string|email|max:255|unique:users',
-            'password' => 'required|string|min:8|confirmed',
+            'MotDePasse' => 'required|string|min:8|confirmed',
+            'Telephone' => 'required|string|max:20',
+            'adresse' => 'required|string|max:255',
         ]);
 
         if ($validator->fails()) {
@@ -36,17 +39,20 @@ class AuthController extends Controller
         try {
             // Créer l'utilisateur
             $user = User::create([
-                'name' => $request->name,
+                'nom' => $request->nom,
+                'prenom' => $request->prenom,
                 'email' => $request->email,
-                'phone' => $request->phone ?? 'Non renseigné',
-                'password' => Hash::make($request->password),
-                'is_active' => true,
+                'MotDePasse' => Hash::make($request->MotDePasse),
+                'Telephone' => $request->Telephone,
+                'adresse' => $request->adresse,
+                'role' => 'client',
+                'statut' => 'actif',
             ]);
 
             // Créer le profil client avec des valeurs par défaut
             ClientProfile::create([
                 'user_id' => $user->id,
-                'address' => $request->address ?? 'À compléter',
+                'address' => $request->adresse,
                 'city' => $request->city ?? 'À compléter',
                 'postal_code' => $request->postal_code ?? '00000',
                 'country' => $request->country ?? 'France',
@@ -56,12 +62,6 @@ class AuthController extends Controller
                 'driving_experience_years' => $request->driving_experience_years ?? 0,
                 'has_garage' => $request->has_garage ?? false,
             ]);
-
-            // Assigner le rôle client par défaut
-            $clientRole = Role::where('name', 'client')->first();
-            if ($clientRole) {
-                $user->roles()->attach($clientRole->id);
-            }
 
             // Créer le token
             $token = $user->createToken('auth-token')->plainTextToken;
@@ -106,21 +106,18 @@ class AuthController extends Controller
         try {
             $user = User::where('email', $request->email)->first();
 
-            if (!$user || !Hash::check($request->password, $user->password)) {
+            if (!$user || !Hash::check($request->password, $user->MotDePasse)) {
                 throw ValidationException::withMessages([
                     'email' => ['Les identifiants fournis sont incorrects.'],
                 ]);
             }
 
-            if (!$user->is_active) {
+            if ($user->statut !== 'actif') {
                 return response()->json([
                     'success' => false,
                     'message' => 'Compte désactivé'
                 ], 403);
             }
-
-            // Mettre à jour la date de dernière connexion
-            $user->updateLastLogin();
 
             // Supprimer les anciens tokens
             $user->tokens()->delete();
@@ -132,7 +129,7 @@ class AuthController extends Controller
                 'success' => true,
                 'message' => 'Connexion réussie',
                 'data' => [
-                    'user' => $user->load(['clientProfile', 'roles']),
+                    'user' => $user->load(['clientProfile']),
                     'token' => $token,
                     'token_type' => 'Bearer'
                 ]
@@ -214,7 +211,7 @@ class AuthController extends Controller
     public function me(Request $request): JsonResponse
     {
         try {
-            $user = $request->user()->load(['clientProfile', 'roles']);
+            $user = $request->user()->load(['clientProfile']);
 
             return response()->json([
                 'success' => true,
@@ -252,7 +249,7 @@ class AuthController extends Controller
             $user = $request->user();
 
             // Vérifier l'ancien mot de passe
-            if (!Hash::check($request->current_password, $user->password)) {
+            if (!Hash::check($request->current_password, $user->MotDePasse)) {
                 return response()->json([
                     'success' => false,
                     'message' => 'Mot de passe actuel incorrect'
@@ -261,7 +258,7 @@ class AuthController extends Controller
 
             // Mettre à jour le mot de passe
             $user->update([
-                'password' => Hash::make($request->new_password)
+                'MotDePasse' => Hash::make($request->new_password)
             ]);
 
             // Supprimer tous les tokens (forcer la reconnexion)
@@ -287,9 +284,10 @@ class AuthController extends Controller
     public function updateProfile(Request $request): JsonResponse
     {
         $validator = Validator::make($request->all(), [
-            'name' => 'sometimes|string|max:255',
-            'phone' => 'sometimes|string|max:20',
-            'address' => 'sometimes|string|max:255',
+            'nom' => 'sometimes|string|max:255',
+            'prenom' => 'sometimes|string|max:255',
+            'Telephone' => 'sometimes|string|max:20',
+            'adresse' => 'sometimes|string|max:255',
             'city' => 'sometimes|string|max:100',
             'postal_code' => 'sometimes|string|max:10',
             'country' => 'sometimes|string|max:100',
@@ -308,18 +306,15 @@ class AuthController extends Controller
             $user = $request->user();
 
             // Mettre à jour les informations utilisateur
-            if ($request->has('name')) {
-                $user->update(['name' => $request->name]);
-            }
-
-            if ($request->has('phone')) {
-                $user->update(['phone' => $request->phone]);
+            $userData = $request->only(['nom', 'prenom', 'Telephone', 'adresse']);
+            if (!empty($userData)) {
+                $user->update($userData);
             }
 
             // Mettre à jour le profil client
             if ($user->clientProfile) {
                 $profileData = $request->only([
-                    'address', 'city', 'postal_code', 'country', 'has_garage'
+                    'city', 'postal_code', 'country', 'has_garage'
                 ]);
 
                 if (!empty($profileData)) {

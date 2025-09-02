@@ -2,15 +2,14 @@
 
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
-use App\Http\Controllers\Api\DevisController;
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\VehicleController;
 use App\Http\Controllers\Api\ContractController;
-use App\Http\Controllers\Api\PaymentController;
+use App\Http\Controllers\Api\DevisController;
 use App\Http\Controllers\Api\SinistreController;
-use App\Http\Controllers\Api\NotificationController;
 use App\Http\Controllers\Api\GestionnaireController;
 use App\Http\Controllers\Api\AdminController;
+use App\Http\Controllers\Api\PaymentController;
 
 /*
 |--------------------------------------------------------------------------
@@ -27,110 +26,96 @@ use App\Http\Controllers\Api\AdminController;
 Route::post('/auth/register', [AuthController::class, 'register']);
 Route::post('/auth/login', [AuthController::class, 'login']);
 
-// Routes publiques pour les devis
+// Routes pour devis (publiques)
 Route::get('/devis/garanties', [DevisController::class, 'getGaranties']);
 Route::get('/devis/compagnies', [DevisController::class, 'getCompagnies']);
-Route::get('/devis/tarifs', [DevisController::class, 'getTarifs']);
+Route::post('/devis/tarifs', [DevisController::class, 'calculateTarif']);
 
 // Routes protégées par authentification
 Route::middleware('auth:sanctum')->group(function () {
-    
-    // Authentification
+    // Auth
     Route::post('/auth/logout', [AuthController::class, 'logout']);
-    Route::post('/auth/refresh', [AuthController::class, 'refresh']);
-    Route::get('/auth/me', [AuthController::class, 'me']);
-
-    // Devis (calcul public, création avec authentification)
-    Route::post('/devis/calculate', [DevisController::class, 'calculate']);
-    Route::post('/devis', [DevisController::class, 'store']);
-    Route::get('/devis', [DevisController::class, 'index']);
-    Route::get('/devis/{devis}', [DevisController::class, 'show']);
+    Route::get('/auth/user', [AuthController::class, 'user']);
 
     // Véhicules
-    Route::apiResource('vehicles', VehicleController::class);
+    Route::get('/vehicles', [VehicleController::class, 'index']);
+    Route::post('/vehicles', [VehicleController::class, 'store']);
+    Route::get('/vehicles/{vehicle}', [VehicleController::class, 'show']);
+    Route::put('/vehicles/{vehicle}', [VehicleController::class, 'update']);
+    Route::delete('/vehicles/{vehicle}', [VehicleController::class, 'destroy']);
 
     // Contrats
-    Route::apiResource('contracts', ContractController::class);
-    Route::post('/contracts/{contract}/renew', [ContractController::class, 'renew']);
-    Route::get('/contracts/{contract}/attestation', [ContractController::class, 'downloadAttestation']);
-
-    // Paiements
-    Route::apiResource('payments', PaymentController::class);
-    Route::post('/payments/simulate', [PaymentController::class, 'simulate']);
+    Route::get('/contracts', [ContractController::class, 'index']);
+    Route::post('/contracts', [ContractController::class, 'store']);
+    Route::get('/contracts/{contract}', [ContractController::class, 'show']);
+    Route::put('/contracts/{contract}', [ContractController::class, 'update']);
+    Route::delete('/contracts/{contract}', [ContractController::class, 'destroy']);
 
     // Sinistres
-    Route::apiResource('sinistres', SinistreController::class);
-    Route::get('/sinistres/stats', [SinistreController::class, 'getStats']);
+    Route::get('/sinistres', [SinistreController::class, 'index']);
+    Route::post('/sinistres', [SinistreController::class, 'store']);
+    Route::get('/sinistres/{sinistre}', [SinistreController::class, 'show']);
+    Route::put('/sinistres/{sinistre}', [SinistreController::class, 'update']);
+    Route::delete('/sinistres/{sinistre}', [SinistreController::class, 'destroy']);
 
-    // Notifications
-    Route::apiResource('notifications', NotificationController::class);
-    Route::put('/notifications/{notification}/read', [NotificationController::class, 'markAsRead']);
+    // Paiements
+    Route::get('/payments', [PaymentController::class, 'index']);
+    Route::post('/payments', [PaymentController::class, 'store']);
+    Route::get('/payments/{payment}', [PaymentController::class, 'show']);
+    Route::put('/payments/{payment}', [PaymentController::class, 'update']);
+    Route::delete('/payments/{payment}', [PaymentController::class, 'destroy']);
+    Route::post('/payments/simulate', [PaymentController::class, 'simulate']);
 
-    // Routes pour gestionnaires
+    // Routes Gestionnaire
     Route::prefix('gestionnaires')->group(function () {
-        // Dashboard
         Route::get('/dashboard', [GestionnaireController::class, 'getDashboardStats']);
-        
-        // Contrats
         Route::get('/contracts', [GestionnaireController::class, 'getAllContracts']);
-        Route::get('/contracts/{contract}', [GestionnaireController::class, 'getContractById']);
-        Route::post('/contracts/{contract}/cancel', [GestionnaireController::class, 'cancelContract']);
-        
-        // Sinistres
+        Route::get('/contracts/{contract}', [GestionnaireController::class, 'getContract']);
+        Route::put('/contracts/{contract}/cancel', [GestionnaireController::class, 'cancelContract']);
         Route::get('/sinistres', [GestionnaireController::class, 'getAllSinistres']);
-        Route::get('/sinistres/{sinistre}', [GestionnaireController::class, 'getSinistreById']);
-        Route::put('/sinistres/{sinistre}', [GestionnaireController::class, 'updateSinistre']);
-        Route::post('/sinistres/{sinistre}/assign-expert', [GestionnaireController::class, 'assignExpert']);
-        
-        // Utilisateurs
+        Route::get('/sinistres/{sinistre}', [GestionnaireController::class, 'getSinistre']);
+        Route::put('/sinistres/{sinistre}/assign', [GestionnaireController::class, 'assignSinistre']);
+        Route::put('/sinistres/{sinistre}/update-status', [GestionnaireController::class, 'updateSinistreStatus']);
         Route::get('/users', [GestionnaireController::class, 'getAllUsers']);
-        Route::get('/users/{user}', [GestionnaireController::class, 'getUserById']);
-        
-        // Notifications et rapports
-        Route::post('/notifications/send', [GestionnaireController::class, 'sendNotification']);
-        Route::get('/reports/{type}', [GestionnaireController::class, 'generateReport']);
+        Route::get('/users/{user}', [GestionnaireController::class, 'getUser']);
+        Route::put('/users/{user}/status', [GestionnaireController::class, 'updateUserStatus']);
+        Route::get('/notifications', [GestionnaireController::class, 'getNotifications']);
+        Route::post('/notifications/mark-read', [GestionnaireController::class, 'markNotificationsAsRead']);
+        Route::get('/reports/contracts', [GestionnaireController::class, 'getContractReports']);
+        Route::get('/reports/sinistres', [GestionnaireController::class, 'getSinistreReports']);
+        Route::get('/reports/revenue', [GestionnaireController::class, 'getRevenueReports']);
     });
 
-    // Routes pour administrateurs
+    // Routes Admin
     Route::prefix('admin')->group(function () {
         // Dashboard
         Route::get('/dashboard', [AdminController::class, 'getDashboardStats']);
         
-        // Utilisateurs
+        // Gestion des utilisateurs
         Route::get('/users', [AdminController::class, 'getAllUsers']);
-        Route::get('/users/{user}', [AdminController::class, 'getUserById']);
         Route::post('/users', [AdminController::class, 'createUser']);
-        Route::put('/users/{user}', [AdminController::class, 'updateUser']);
-        Route::delete('/users/{user}', [AdminController::class, 'deleteUser']);
-        Route::put('/users/{user}/toggle-status', [AdminController::class, 'toggleUserStatus']);
-        
-        // Rôles et permissions
-        Route::get('/roles', [AdminController::class, 'getRoles']);
-        Route::get('/permissions', [AdminController::class, 'getPermissions']);
-        Route::post('/users/{user}/assign-role', [AdminController::class, 'assignRole']);
+        Route::get('/users/{id}', [AdminController::class, 'getUserById']);
+        Route::put('/users/{id}', [AdminController::class, 'updateUser']);
+        Route::delete('/users/{id}', [AdminController::class, 'deleteUser']);
+        Route::put('/users/{id}/toggle-status', [AdminController::class, 'toggleUserStatus']);
         
         // Logs système
-        Route::get('/logs', [AdminController::class, 'getSystemLogs']);
-        Route::delete('/logs', [AdminController::class, 'clearLogs']);
+        Route::get('/system/logs', [AdminController::class, 'getSystemLogs']);
+        Route::delete('/system/logs', [AdminController::class, 'clearSystemLogs']);
         
         // Statistiques système
-        Route::get('/system-stats', [AdminController::class, 'getSystemStats']);
+        Route::get('/system/stats', [AdminController::class, 'getSystemStats']);
         
         // Sauvegardes
-        Route::post('/backup', [AdminController::class, 'createBackup']);
-        Route::get('/backups', [AdminController::class, 'getBackups']);
-        Route::post('/backups/{backupId}/restore', [AdminController::class, 'restoreBackup']);
+        Route::get('/system/backups', [AdminController::class, 'getBackups']);
+        Route::post('/system/backups', [AdminController::class, 'createBackup']);
+        Route::post('/system/backups/{backupId}/restore', [AdminController::class, 'restoreBackup']);
         
-        // Configuration
-        Route::get('/config', [AdminController::class, 'getSystemConfig']);
-        Route::put('/config', [AdminController::class, 'updateSystemConfig']);
-        
-        // Maintenance
-        Route::post('/maintenance', [AdminController::class, 'putSystemInMaintenance']);
-        Route::post('/cache/clear', [AdminController::class, 'clearCache']);
-        
-        // Rapports
-        Route::get('/reports/{type}', [AdminController::class, 'generateReport']);
+        // Configuration système
+        Route::get('/system/config', [AdminController::class, 'getSystemConfig']);
+        Route::put('/system/config', [AdminController::class, 'updateSystemConfig']);
+        Route::post('/system/maintenance', [AdminController::class, 'toggleMaintenanceMode']);
+        Route::post('/system/cache/clear', [AdminController::class, 'clearCache']);
     });
 });
 

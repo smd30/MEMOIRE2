@@ -22,14 +22,14 @@ class GestionnaireController extends Controller
         try {
             $stats = [
                 'total_contracts' => Contract::count(),
-                'active_contracts' => Contract::where('status', 'active')->count(),
-                'expired_contracts' => Contract::where('status', 'expired')->count(),
+                'active_contracts' => Contract::where('status', 'actif')->count(),
+                'expired_contracts' => Contract::where('status', 'expire')->count(),
                 'total_sinistres' => Sinistre::count(),
                 'pending_sinistres' => Sinistre::where('status', 'nouveau')->count(),
                 'total_users' => User::count(),
                 'new_users_this_month' => User::whereMonth('created_at', now()->month)->count(),
-                'total_revenue' => Contract::where('status', 'active')->sum('total_premium'),
-                'monthly_revenue' => Contract::where('status', 'active')
+                'total_revenue' => Contract::where('status', 'actif')->sum('total_premium'),
+                'monthly_revenue' => Contract::where('status', 'actif')
                     ->whereMonth('created_at', now()->month)
                     ->sum('total_premium')
             ];
@@ -65,13 +65,14 @@ class GestionnaireController extends Controller
                 $query->where(function ($q) use ($search) {
                     $q->where('contract_number', 'like', "%{$search}%")
                       ->orWhereHas('user', function ($userQuery) use ($search) {
-                          $userQuery->where('name', 'like', "%{$search}%")
+                          $userQuery->where('nom', 'like', "%{$search}%")
+                                   ->orWhere('prenom', 'like', "%{$search}%")
                                    ->orWhere('email', 'like', "%{$search}%");
                       })
                       ->orWhereHas('vehicle', function ($vehicleQuery) use ($search) {
-                          $vehicleQuery->where('brand', 'like', "%{$search}%")
-                                      ->orWhere('model', 'like', "%{$search}%")
-                                      ->orWhere('plate_number', 'like', "%{$search}%");
+                          $vehicleQuery->where('marqueVehicule', 'like', "%{$search}%")
+                                      ->orWhere('modèle', 'like', "%{$search}%")
+                                      ->orWhere('immatriculation', 'like', "%{$search}%");
                       });
                 });
             }
@@ -97,7 +98,7 @@ class GestionnaireController extends Controller
     public function getContractById(Contract $contract): JsonResponse
     {
         try {
-            $contract->load(['user', 'vehicle', 'garanties']);
+            $contract->load(['user', 'vehicle']);
 
             return response()->json([
                 'success' => true,
@@ -123,7 +124,7 @@ class GestionnaireController extends Controller
             ]);
 
             $contract->update([
-                'status' => 'cancelled',
+                'status' => 'annule',
                 'notes' => $request->reason
             ]);
 
@@ -163,7 +164,8 @@ class GestionnaireController extends Controller
                       ->orWhere('description', 'like', "%{$search}%")
                       ->orWhere('location', 'like', "%{$search}%")
                       ->orWhereHas('user', function ($userQuery) use ($search) {
-                          $userQuery->where('name', 'like', "%{$search}%")
+                          $userQuery->where('nom', 'like', "%{$search}%")
+                                   ->orWhere('prenom', 'like', "%{$search}%")
                                    ->orWhere('email', 'like', "%{$search}%");
                       });
                 });
@@ -190,7 +192,7 @@ class GestionnaireController extends Controller
     public function getSinistreById(Sinistre $sinistre): JsonResponse
     {
         try {
-            $sinistre->load(['user', 'contract.vehicle', 'manager']);
+            $sinistre->load(['user', 'contract.vehicle']);
 
             return response()->json([
                 'success' => true,
@@ -273,14 +275,15 @@ class GestionnaireController extends Controller
             if ($request->filled('search')) {
                 $search = $request->search;
                 $query->where(function ($q) use ($search) {
-                    $q->where('name', 'like', "%{$search}%")
+                    $q->where('nom', 'like', "%{$search}%")
+                      ->orWhere('prenom', 'like', "%{$search}%")
                       ->orWhere('email', 'like', "%{$search}%")
-                      ->orWhere('phone', 'like', "%{$search}%");
+                      ->orWhere('Telephone', 'like', "%{$search}%");
                 });
             }
 
-            if ($request->filled('is_active')) {
-                $query->where('is_active', $request->is_active);
+            if ($request->filled('statut')) {
+                $query->where('statut', $request->statut);
             }
 
             $users = $query->orderBy('created_at', 'desc')->get();
@@ -405,9 +408,9 @@ class GestionnaireController extends Controller
 
         return [
             'total' => $contracts->count(),
-            'active' => $contracts->where('status', 'active')->count(),
-            'expired' => $contracts->where('status', 'expired')->count(),
-            'cancelled' => $contracts->where('status', 'cancelled')->count(),
+            'actif' => $contracts->where('status', 'actif')->count(),
+            'expire' => $contracts->where('status', 'expire')->count(),
+            'annule' => $contracts->where('status', 'annule')->count(),
             'total_revenue' => $contracts->sum('total_premium'),
             'contracts' => $contracts
         ];
@@ -460,8 +463,8 @@ class GestionnaireController extends Controller
 
         return [
             'total' => $users->count(),
-            'active' => $users->where('is_active', true)->count(),
-            'inactive' => $users->where('is_active', false)->count(),
+            'actif' => $users->where('statut', 'actif')->count(),
+            'inactif' => $users->where('statut', 'inactif')->count(),
             'new_this_month' => $users->where('created_at', '>=', now()->startOfMonth())->count(),
             'users' => $users
         ];

@@ -13,6 +13,7 @@ return new class extends Migration
     {
         Schema::create('sinistres', function (Blueprint $table) {
             $table->id();
+            $table->string('sinistre_number')->unique();
             $table->foreignId('contract_id')->constrained()->onDelete('cascade');
             $table->foreignId('user_id')->constrained()->onDelete('cascade');
             $table->foreignId('managed_by')->nullable()->constrained('users')->onDelete('set null');

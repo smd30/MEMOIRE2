@@ -13,26 +13,21 @@ class Vehicle extends Model
 
     protected $fillable = [
         'user_id',
-        'plate_number',
-        'brand',
-        'model',
-        'year',
-        'power_fiscal',
-        'category',
-        'sub_category',
-        'fuel_type',
+        'marqueVehicule',
+        'modèle',
+        'immatriculation',
+        'categorie',
+        'puissanceFiscale',
+        'dateMiseEnCirculation',
+        'valeurVéhicule',
+        'carteGrise',
         'color',
-        'mileage',
-        'additional_features',
-        'is_active',
     ];
 
     protected $casts = [
-        'year' => 'integer',
-        'power_fiscal' => 'integer',
-        'mileage' => 'integer',
-        'additional_features' => 'array',
-        'is_active' => 'boolean',
+        'puissanceFiscale' => 'integer',
+        'valeurVéhicule' => 'decimal:2',
+        'dateMiseEnCirculation' => 'date',
     ];
 
     /**
@@ -52,19 +47,11 @@ class Vehicle extends Model
     }
 
     /**
-     * Scope pour les véhicules actifs
-     */
-    public function scopeActive($query)
-    {
-        return $query->where('is_active', true);
-    }
-
-    /**
      * Scope pour une catégorie spécifique
      */
     public function scopeByCategory($query, $category)
     {
-        return $query->where('category', $category);
+        return $query->where('categorie', $category);
     }
 
     /**
@@ -72,7 +59,7 @@ class Vehicle extends Model
      */
     public function scopeByBrand($query, $brand)
     {
-        return $query->where('brand', $brand);
+        return $query->where('marqueVehicule', $brand);
     }
 
     /**
@@ -80,31 +67,7 @@ class Vehicle extends Model
      */
     public function scopeByPowerFiscal($query, $powerFiscal)
     {
-        return $query->where('power_fiscal', $powerFiscal);
-    }
-
-    /**
-     * Vérifier si le véhicule est actif
-     */
-    public function isActive(): bool
-    {
-        return $this->is_active;
-    }
-
-    /**
-     * Activer le véhicule
-     */
-    public function activate(): void
-    {
-        $this->update(['is_active' => true]);
-    }
-
-    /**
-     * Désactiver le véhicule
-     */
-    public function deactivate(): void
-    {
-        $this->update(['is_active' => false]);
+        return $query->where('puissanceFiscale', $powerFiscal);
     }
 
     /**
@@ -112,7 +75,7 @@ class Vehicle extends Model
      */
     public function getAge(): int
     {
-        return date('Y') - $this->year;
+        return $this->dateMiseEnCirculation->diffInYears(now());
     }
 
     /**
@@ -128,15 +91,7 @@ class Vehicle extends Model
      */
     public function getFullDescription(): string
     {
-        return "{$this->brand} {$this->model} {$this->year} ({$this->plate_number})";
-    }
-
-    /**
-     * Obtenir le type de carburant
-     */
-    public function getFuelType(): string
-    {
-        return $this->fuel_type ?? 'Non spécifié';
+        return "{$this->marqueVehicule} {$this->modèle} ({$this->immatriculation})";
     }
 
     /**
@@ -148,36 +103,12 @@ class Vehicle extends Model
     }
 
     /**
-     * Obtenir le kilométrage
-     */
-    public function getMileage(): int
-    {
-        return $this->mileage ?? 0;
-    }
-
-    /**
-     * Obtenir les caractéristiques additionnelles
-     */
-    public function getAdditionalFeatures(): array
-    {
-        return $this->additional_features ?? [];
-    }
-
-    /**
-     * Vérifier si le véhicule a une caractéristique spécifique
-     */
-    public function hasFeature(string $feature): bool
-    {
-        return in_array($feature, $this->getAdditionalFeatures());
-    }
-
-    /**
      * Obtenir le contrat actif
      */
     public function getActiveContract(): ?Contract
     {
         return $this->contracts()
-            ->where('status', 'active')
+            ->where('status', 'actif')
             ->where('end_date', '>', now())
             ->first();
     }
@@ -196,7 +127,7 @@ class Vehicle extends Model
     public function getExpiringContract(): ?Contract
     {
         return $this->contracts()
-            ->where('status', 'active')
+            ->where('status', 'actif')
             ->where('end_date', '>', now())
             ->where('end_date', '<=', now()->addDays(30))
             ->first();
@@ -216,17 +147,15 @@ class Vehicle extends Model
     public static function getValidationRules(): array
     {
         return [
-            'plate_number' => 'required|string|unique:vehicles,plate_number|regex:/^[A-Z]{2}-[0-9]{3}-[A-Z]{2}$/',
-            'brand' => 'required|string|max:100',
-            'model' => 'required|string|max:100',
-            'year' => 'required|integer|min:1900|max:' . (date('Y') + 1),
-            'power_fiscal' => 'required|integer|min:1|max:50',
-            'category' => 'required|string|in:Citadine,SUV,Berline,Utilitaire,Moto',
-            'sub_category' => 'nullable|string|max:100',
-            'fuel_type' => 'required|string|in:Essence,Diesel,Électrique,Hybride,GPL',
+            'marqueVehicule' => 'required|string|max:100',
+            'modèle' => 'required|string|max:100',
+            'immatriculation' => 'required|string|unique:vehicles,immatriculation|regex:/^[A-Z]{2}-[0-9]{3}-[A-Z]{2}$/',
+            'categorie' => 'required|string|in:Citadine,SUV,Berline,Utilitaire,Moto',
+            'puissanceFiscale' => 'required|integer|min:1|max:50',
+            'dateMiseEnCirculation' => 'required|date|before_or_equal:today',
+            'valeurVéhicule' => 'required|numeric|min:0',
+            'carteGrise' => 'required|string|max:50',
             'color' => 'required|string|max:50',
-            'mileage' => 'required|integer|min:0',
-            'additional_features' => 'nullable|array',
         ];
     }
 }

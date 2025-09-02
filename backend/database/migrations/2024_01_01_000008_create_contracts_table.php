@@ -22,7 +22,7 @@ return new class extends Migration
             $table->decimal('base_premium', 10, 2);
             $table->decimal('total_premium', 10, 2);
             $table->decimal('taxes', 10, 2);
-            $table->enum('status', ['draft', 'active', 'expired', 'cancelled'])->default('draft');
+            $table->enum('status', ['brouillon', 'actif', 'expire', 'annule'])->default('brouillon');
             $table->text('notes')->nullable();
             $table->timestamps();
         });

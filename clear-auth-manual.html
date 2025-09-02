@@ -1,0 +1,147 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nettoyage Authentification - Assurance Auto</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            background: linear-gradient(135deg, #151C46 0%, #0066cc 100%);
+            margin: 0;
+            padding: 20px;
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .container {
+            background: white;
+            padding: 40px;
+            border-radius: 10px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+            max-width: 500px;
+            width: 100%;
+            text-align: center;
+        }
+        h1 {
+            color: #151C46;
+            margin-bottom: 30px;
+        }
+        .status {
+            background: #d4edda;
+            color: #155724;
+            padding: 15px;
+            border-radius: 5px;
+            margin: 20px 0;
+            font-weight: bold;
+        }
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+        }
+        .info {
+            background: #d1ecf1;
+            color: #0c5460;
+        }
+        button {
+            background: linear-gradient(135deg, #151C46 0%, #0066cc 100%);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 5px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+            margin: 10px;
+            transition: transform 0.2s;
+        }
+        button:hover {
+            transform: translateY(-2px);
+        }
+        .credentials {
+            background: #f8f9fa;
+            padding: 15px;
+            border-radius: 5px;
+            margin-top: 20px;
+            border-left: 4px solid #0066cc;
+        }
+        .credential-item {
+            margin: 5px 0;
+            font-family: monospace;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>🧹 Nettoyage Authentification</h1>
+        
+        <div id="status" class="status">
+            🔄 Nettoyage en cours...
+        </div>
+        
+        <button onclick="clearAuth()">Nettoyer l'authentification</button>
+        <button onclick="goToLogin()">Aller à la connexion admin</button>
+        <button onclick="goToMain()">Aller à l'interface principale</button>
+        
+        <div class="credentials">
+            <h3>📋 Identifiants Admin :</h3>
+            <div class="credential-item"><strong>Email:</strong> admin@example.com</div>
+            <div class="credential-item"><strong>Mot de passe:</strong> password</div>
+        </div>
+    </div>
+
+    <script>
+        // Nettoyer automatiquement au chargement
+        clearAuth();
+        
+        function clearAuth() {
+            const status = document.getElementById('status');
+            
+            // Nettoyer localStorage
+            localStorage.removeItem('auth_token');
+            localStorage.removeItem('current_user');
+            
+            // Nettoyer sessionStorage
+            sessionStorage.removeItem('auth_token');
+            sessionStorage.removeItem('current_user');
+            
+            // Nettoyer cookies
+            document.cookie.split(";").forEach(function(c) { 
+                document.cookie = c.replace(/^ +/, "").replace(/=.*/, "=;expires=" + new Date().toUTCString() + ";path=/"); 
+            });
+            
+            status.innerHTML = '✅ Authentification nettoyée avec succès !';
+            status.className = 'status';
+            
+            console.log('Authentification nettoyée');
+        }
+        
+        function goToLogin() {
+            window.location.href = '/src/app/pages/clear-auth.html';
+        }
+        
+        function goToMain() {
+            window.location.href = '/';
+        }
+        
+        // Vérifier l'état de l'authentification
+        function checkAuthStatus() {
+            const token = localStorage.getItem('auth_token');
+            const user = localStorage.getItem('current_user');
+            
+            if (token || user) {
+                document.getElementById('status').innerHTML = '⚠️ Authentification détectée - Cliquez "Nettoyer"';
+                document.getElementById('status').className = 'status error';
+            } else {
+                document.getElementById('status').innerHTML = '✅ Aucune authentification détectée';
+                document.getElementById('status').className = 'status';
+            }
+        }
+        
+        // Vérifier toutes les 2 secondes
+        setInterval(checkAuthStatus, 2000);
+        checkAuthStatus();
+    </script>
+</body>
+</html>

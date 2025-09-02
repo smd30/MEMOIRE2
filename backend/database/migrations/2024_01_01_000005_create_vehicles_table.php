@@ -14,18 +14,15 @@ return new class extends Migration
         Schema::create('vehicles', function (Blueprint $table) {
             $table->id();
             $table->foreignId('user_id')->constrained()->onDelete('cascade');
-            $table->string('plate_number')->unique();
-            $table->string('brand');
-            $table->string('model');
-            $table->integer('year');
-            $table->integer('power_fiscal');
-            $table->string('category');
-            $table->string('sub_category')->nullable();
-            $table->string('fuel_type');
+            $table->string('marqueVehicule');
+            $table->string('modèle');
+            $table->string('immatriculation')->unique();
+            $table->string('categorie');
+            $table->integer('puissanceFiscale');
+            $table->date('dateMiseEnCirculation');
+            $table->decimal('valeurVéhicule', 10, 2);
+            $table->string('carteGrise');
             $table->string('color');
-            $table->integer('mileage');
-            $table->text('additional_features')->nullable();
-            $table->boolean('is_active')->default(true);
             $table->timestamps();
         });
     }
