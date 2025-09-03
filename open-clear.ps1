@@ -22,3 +22,6 @@ Write-Host "Mot de passe: password" -ForegroundColor White
 
 Write-Host "`n✅ Backend vérifié : Connexion admin fonctionnelle" -ForegroundColor Green
 Write-Host "🎉 Prêt à résoudre le problème d'authentification !" -ForegroundColor Green
+
+
+

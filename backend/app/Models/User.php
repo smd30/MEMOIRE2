@@ -35,13 +35,7 @@ class User extends Authenticatable
         'updated_at' => 'datetime',
     ];
 
-    /**
-     * Relation avec les rôles
-     */
-    public function roles()
-    {
-        return $this->belongsToMany(Role::class, 'user_roles');
-    }
+
 
     /**
      * Relation avec le profil client

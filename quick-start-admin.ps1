@@ -33,3 +33,4 @@ Write-Host "Frontend: http://localhost:4200" -ForegroundColor White
 Write-Host "Connexion Admin: http://localhost:4200/src/app/pages/clear-auth.html" -ForegroundColor White
 
 Write-Host "`n🎉 Prêt à tester l'interface admin ! 🎉" -ForegroundColor Green
+

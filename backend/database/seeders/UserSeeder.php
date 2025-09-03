@@ -29,6 +29,24 @@ class UserSeeder extends Seeder
     {
         $users = [
             [
+                'name' => 'Mamadou Ndiaye',
+                'email' => 'ndiaye@gmail.com',
+                'phone' => '+221 77 123 45 67',
+                'password' => 'password',
+                'role' => 'client',
+                'profile' => [
+                    'address' => '123 Rue de la Paix',
+                    'city' => 'Dakar',
+                    'postal_code' => '10000',
+                    'country' => 'Sénégal',
+                    'birth_date' => '1985-06-15',
+                    'driving_license_number' => 'SN123456789',
+                    'driving_license_date' => '2003-06-15',
+                    'driving_experience_years' => 20,
+                    'has_garage' => true,
+                ],
+            ],
+            [
                 'name' => 'Client Test',
                 'email' => 'client@test.com',
                 'phone' => '+33123456789',

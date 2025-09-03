@@ -20,3 +20,6 @@ Write-Host "Email: admin@example.com" -ForegroundColor White
 Write-Host "Mot de passe: password" -ForegroundColor White
 
 Write-Host "`n🚨 URGENT : Utilisez cette page pour résoudre le problème ! 🚨" -ForegroundColor Red
+
+
+

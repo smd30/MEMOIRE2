@@ -1,30 +1,34 @@
 # Script pour démarrer les serveurs backend et frontend
-Write-Host "=== DÉMARRAGE DES SERVEURS ===" -ForegroundColor Green
+Write-Host "=== Démarrage des Serveurs ===" -ForegroundColor Green
+Write-Host ""
 
-# Démarrer le serveur backend Laravel
-Write-Host "`n1. Démarrage du serveur backend Laravel..." -ForegroundColor Yellow
-Start-Process powershell -ArgumentList "-NoExit", "-Command", "cd backend; php artisan serve" -WindowStyle Normal
+# Démarrer le backend Laravel
+Write-Host "1. Démarrage du backend Laravel..." -ForegroundColor Yellow
+Write-Host "   Commande: cd backend; php artisan serve --host=0.0.0.0 --port=8000" -ForegroundColor Cyan
+Start-Process powershell -ArgumentList "-Command", "cd backend; php artisan serve --host=0.0.0.0 --port=8000" -WindowStyle Normal
+Write-Host "   ✅ Backend démarré sur http://localhost:8000" -ForegroundColor Green
 
-# Attendre un peu pour que le backend démarre
-Write-Host "Attente du démarrage du backend..." -ForegroundColor Gray
+# Attendre un peu
 Start-Sleep -Seconds 3
 
-# Démarrer le serveur frontend Angular
-Write-Host "`n2. Démarrage du serveur frontend Angular..." -ForegroundColor Yellow
-Start-Process powershell -ArgumentList "-NoExit", "-Command", "cd frontend; ng serve" -WindowStyle Normal
+# Démarrer le frontend Angular
+Write-Host ""
+Write-Host "2. Démarrage du frontend Angular..." -ForegroundColor Yellow
+Write-Host "   Commande: cd frontend; npm start" -ForegroundColor Cyan
+Start-Process powershell -ArgumentList "-Command", "cd frontend; npm start" -WindowStyle Normal
+Write-Host "   ✅ Frontend démarré sur http://localhost:4200" -ForegroundColor Green
 
-Write-Host "`n=== SERVEURS DÉMARRÉS ===" -ForegroundColor Green
-Write-Host "Backend: http://localhost:8000" -ForegroundColor Cyan
-Write-Host "Frontend: http://localhost:4200" -ForegroundColor Cyan
-
-Write-Host "`n=== INSTRUCTIONS DE CONNEXION ===" -ForegroundColor Yellow
-Write-Host "1. Ouvrez votre navigateur sur http://localhost:4200" -ForegroundColor White
-Write-Host "2. Cliquez sur 'Se Connecter'" -ForegroundColor White
-Write-Host "3. Utilisez les identifiants admin:" -ForegroundColor White
-Write-Host "   Email: admin@example.com" -ForegroundColor Cyan
-Write-Host "   Mot de passe: password" -ForegroundColor Cyan
-Write-Host "4. Vous serez automatiquement redirigé vers l'interface admin" -ForegroundColor White
-
-Write-Host "`n=== AUTRES UTILISATEURS DISPONIBLES ===" -ForegroundColor Yellow
-Write-Host "Gestionnaire: gestionnaire@example.com / password" -ForegroundColor Cyan
-Write-Host "Client: client@example.com / password" -ForegroundColor Cyan
+Write-Host ""
+Write-Host "=== Serveurs Démarrés ===" -ForegroundColor Green
+Write-Host ""
+Write-Host "🔗 Liens d'accès:" -ForegroundColor Yellow
+Write-Host "   • Frontend: http://localhost:4200" -ForegroundColor Cyan
+Write-Host "   • Inscription: http://localhost:4200/register" -ForegroundColor Cyan
+Write-Host "   • Backend API: http://localhost:8000/api" -ForegroundColor Cyan
+Write-Host ""
+Write-Host "📋 Test d'inscription: test-inscription.html" -ForegroundColor Yellow
+Write-Host ""
+Write-Host "✅ Les serveurs sont maintenant prêts !" -ForegroundColor Green
+Write-Host ""
+Write-Host "Appuyez sur une touche pour fermer..." -ForegroundColor Gray
+$null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")

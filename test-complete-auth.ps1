@@ -66,3 +66,4 @@ if ($loginResponse.StatusCode -eq 200 -and $loginData.success) {
 }
 
 Write-Host "=== Fin du test ===" -ForegroundColor Green
+

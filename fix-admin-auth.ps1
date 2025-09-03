@@ -17,3 +17,4 @@ Write-Host "Email: admin@example.com" -ForegroundColor White
 Write-Host "Mot de passe: password" -ForegroundColor White
 
 Write-Host "`n🎉 Problème d'authentification résolu ! 🎉" -ForegroundColor Green
+

@@ -37,3 +37,4 @@ Write-Host "Email: admin@example.com" -ForegroundColor White
 Write-Host "Mot de passe: password" -ForegroundColor White
 
 Write-Host "`n🎉 Prêt à tester l'interface admin ! 🎉" -ForegroundColor Green
+
