@@ -36,6 +36,16 @@ Route::middleware('auth:sanctum')->group(function () {
     // Auth
     Route::post('/auth/logout', [AuthController::class, 'logout']);
     Route::get('/auth/user', [AuthController::class, 'user']);
+    Route::post('/auth/refresh', [AuthController::class, 'refresh']);
+    Route::put('/auth/profile', [AuthController::class, 'updateProfile']);
+
+    // Données utilisateur
+    Route::get('/user/data', [AuthController::class, 'getUserData']);
+    Route::put('/user/data', [AuthController::class, 'updateUserData']);
+    Route::post('/user/sync', [AuthController::class, 'syncUserData']);
+    Route::get('/user/export', [AuthController::class, 'exportUserData']);
+    Route::post('/user/import', [AuthController::class, 'importUserData']);
+    Route::get('/user/stats', [AuthController::class, 'getUserStats']);
 
     // Véhicules
     Route::get('/vehicles', [VehicleController::class, 'index']);

@@ -23,6 +23,8 @@ class User extends Authenticatable
         'adresse',
         'role',
         'statut',
+        'user_data',
+        'last_login_at',
     ];
 
     protected $hidden = [
@@ -33,6 +35,8 @@ class User extends Authenticatable
     protected $casts = [
         'created_at' => 'datetime',
         'updated_at' => 'datetime',
+        'last_login_at' => 'datetime',
+        'user_data' => 'array',
     ];
 
 

@@ -119,6 +119,9 @@ class AuthController extends Controller
                 ], 403);
             }
 
+            // Mettre à jour la dernière connexion
+            $user->update(['last_login_at' => now()]);
+
             // Supprimer les anciens tokens
             $user->tokens()->delete();
 
@@ -173,37 +176,7 @@ class AuthController extends Controller
         }
     }
 
-    /**
-     * Rafraîchir le token
-     */
-    public function refresh(Request $request): JsonResponse
-    {
-        try {
-            $user = $request->user();
 
-            // Supprimer l'ancien token
-            $request->user()->currentAccessToken()->delete();
-
-            // Créer un nouveau token
-            $token = $user->createToken('auth-token')->plainTextToken;
-
-            return response()->json([
-                'success' => true,
-                'message' => 'Token rafraîchi avec succès',
-                'data' => [
-                    'token' => $token,
-                    'token_type' => 'Bearer'
-                ]
-            ]);
-
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Erreur lors du rafraîchissement du token',
-                'error' => $e->getMessage()
-            ], 500);
-        }
-    }
 
     /**
      * Obtenir les informations de l'utilisateur connecté
@@ -335,5 +308,270 @@ class AuthController extends Controller
                 'error' => $e->getMessage()
             ], 500);
         }
+    }
+
+    /**
+     * Rafraîchir le token d'authentification
+     */
+    public function refresh(Request $request): JsonResponse
+    {
+        try {
+            $user = $request->user();
+            
+            // Supprimer l'ancien token
+            $user->tokens()->delete();
+            
+            // Créer un nouveau token
+            $token = $user->createToken('auth-token')->plainTextToken;
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Token rafraîchi avec succès',
+                'data' => [
+                    'user' => $user->load('clientProfile'),
+                    'token' => $token,
+                    'token_type' => 'Bearer'
+                ]
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Erreur lors du rafraîchissement du token',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Obtenir les données utilisateur
+     */
+    public function getUserData(Request $request): JsonResponse
+    {
+        try {
+            $user = $request->user();
+            
+            // Données par défaut si pas encore créées
+            $userData = [
+                'preferences' => [
+                    'theme' => 'light',
+                    'language' => 'fr',
+                    'notifications' => [
+                        'email' => true,
+                        'push' => false,
+                        'sms' => false
+                    ],
+                    'dashboard' => [
+                        'showStats' => true,
+                        'showRecentActivity' => true,
+                        'layout' => 'grid'
+                    ]
+                ],
+                'activities' => [],
+                'lastSync' => now()->toISOString()
+            ];
+
+            // Si l'utilisateur a des données stockées, les récupérer
+            if ($user->user_data) {
+                $userData = array_merge($userData, json_decode($user->user_data, true));
+            }
+
+            return response()->json([
+                'success' => true,
+                'data' => $userData
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Erreur lors de la récupération des données',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Mettre à jour les données utilisateur
+     */
+    public function updateUserData(Request $request): JsonResponse
+    {
+        try {
+            $user = $request->user();
+            
+            $userData = $request->all();
+            $userData['lastSync'] = now()->toISOString();
+            
+            // Sauvegarder dans la base de données
+            $user->update([
+                'user_data' => json_encode($userData)
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Données mises à jour avec succès',
+                'data' => $userData
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Erreur lors de la mise à jour des données',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Synchroniser les données utilisateur
+     */
+    public function syncUserData(Request $request): JsonResponse
+    {
+        try {
+            $user = $request->user();
+            
+            // Récupérer les données actuelles
+            $currentData = $user->user_data ? json_decode($user->user_data, true) : [];
+            
+            // Mettre à jour le timestamp de synchronisation
+            $currentData['lastSync'] = now()->toISOString();
+            
+            // Sauvegarder
+            $user->update([
+                'user_data' => json_encode($currentData)
+            ]);
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Données synchronisées avec succès',
+                'data' => $currentData
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Erreur lors de la synchronisation',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Exporter les données utilisateur
+     */
+    public function exportUserData(Request $request): JsonResponse
+    {
+        try {
+            $user = $request->user();
+            
+            $exportData = [
+                'user' => [
+                    'id' => $user->id,
+                    'nom' => $user->nom,
+                    'prenom' => $user->prenom,
+                    'email' => $user->email,
+                    'role' => $user->role,
+                    'created_at' => $user->created_at,
+                    'updated_at' => $user->updated_at
+                ],
+                'profile' => $user->clientProfile,
+                'user_data' => $user->user_data ? json_decode($user->user_data, true) : null,
+                'export_date' => now()->toISOString()
+            ];
+
+            return response()->json([
+                'success' => true,
+                'data' => $exportData
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Erreur lors de l\'export',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Importer les données utilisateur
+     */
+    public function importUserData(Request $request): JsonResponse
+    {
+        try {
+            $user = $request->user();
+            
+            $importData = $request->all();
+            
+            // Mettre à jour les données utilisateur
+            if (isset($importData['user_data'])) {
+                $user->update([
+                    'user_data' => json_encode($importData['user_data'])
+                ]);
+            }
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Données importées avec succès',
+                'data' => $importData['user_data'] ?? []
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Erreur lors de l\'import',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Obtenir les statistiques utilisateur
+     */
+    public function getUserStats(Request $request): JsonResponse
+    {
+        try {
+            $user = $request->user();
+            
+            $stats = [
+                'total_contracts' => $user->contracts()->count(),
+                'total_vehicles' => $user->vehicles()->count(),
+                'total_sinistres' => $user->sinistres()->count(),
+                'total_payments' => $user->payments()->count(),
+                'last_login' => $user->last_login_at,
+                'account_age_days' => $user->created_at->diffInDays(now()),
+                'profile_completion' => $this->calculateProfileCompletion($user)
+            ];
+
+            return response()->json([
+                'success' => true,
+                'data' => $stats
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Erreur lors de la récupération des statistiques',
+                'error' => $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Calculer le pourcentage de complétion du profil
+     */
+    private function calculateProfileCompletion($user): int
+    {
+        $fields = [
+            'nom', 'prenom', 'email', 'Telephone', 'adresse'
+        ];
+        
+        $completed = 0;
+        foreach ($fields as $field) {
+            if (!empty($user->$field)) {
+                $completed++;
+            }
+        }
+        
+        return round(($completed / count($fields)) * 100);
     }
 }
