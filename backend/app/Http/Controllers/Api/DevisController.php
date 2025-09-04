@@ -3,191 +3,26 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
-use App\Models\Devis;
-use App\Models\Garantie;
-use App\Models\TarifCategory;
-use App\Models\Vehicle;
 use Illuminate\Http\Request;
-use Illuminate\Http\JsonResponse;
+use App\Models\Devis;
+use App\Models\Compagnie;
+use App\Models\Garantie;
+use App\Models\Vehicule;
+use App\Services\DevisCalculationService;
 use Illuminate\Support\Facades\Validator;
-use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Storage;
 
 class DevisController extends Controller
 {
     /**
-     * Calculer un devis sans le sauvegarder
+     * Afficher la liste des devis
      */
-    public function calculate(Request $request): JsonResponse
+    public function index()
     {
-        $validator = Validator::make($request->all(), [
-            'vehicle_info.category' => 'required|string',
-            'vehicle_info.sub_category' => 'nullable|string',
-            'vehicle_info.power_fiscal' => 'required|integer|min:1|max:50',
-            'vehicle_info.year' => 'required|integer|min:1900|max:' . (date('Y') + 1),
-            'selected_garanties' => 'required|array|min:1',
-            'selected_garanties.*' => 'string|exists:garanties,name',
-            'duration_months' => 'required|integer|min:1|max:12',
-        ]);
-
-        if ($validator->fails()) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Données invalides',
-                'errors' => $validator->errors()
-            ], 422);
-        }
-
-        try {
-            $vehicleInfo = $request->input('vehicle_info');
-            $selectedGaranties = $request->input('selected_garanties');
-            $durationMonths = $request->input('duration_months');
-
-            // Calculer la prime de base
-            $basePremium = $this->calculateBasePremium($vehicleInfo, $durationMonths);
-            
-            // Calculer les coefficients des garanties
-            $garantieCoefficients = $this->calculateGarantieCoefficients($selectedGaranties);
-            
-            // Calculer la prime totale
-            $garantiesPremium = $basePremium * $garantieCoefficients['total_coefficient'];
-            $taxes = ($basePremium + $garantiesPremium) * config('app.default_tax_rate', 0.20);
-            $totalPremium = $basePremium + $garantiesPremium + $taxes;
-
-            // Générer un numéro de devis temporaire
-            $quoteNumber = 'TEMP-' . date('YmdHis') . '-' . rand(1000, 9999);
-
-            $devis = [
-                'quote_number' => $quoteNumber,
-                'vehicle_info' => $vehicleInfo,
-                'selected_garanties' => $selectedGaranties,
-                'duration_months' => $durationMonths,
-                'base_premium' => round($basePremium, 2),
-                'garanties_premium' => round($garantiesPremium, 2),
-                'taxes' => round($taxes, 2),
-                'total_premium' => round($totalPremium, 2),
-                'monthly_premium' => round($totalPremium / $durationMonths, 2),
-                'garanties_details' => $garantieCoefficients['details'],
-                'expires_at' => now()->addDays(30),
-            ];
-
-            // Optionnel : Envoyer à la Company API pour validation
-            if (config('app.company_api_enabled', true)) {
-                try {
-                    $companyApiResponse = Http::timeout(10)->post(config('app.company_api_url') . '/api/quote', [
-                        'vehicle_info' => $vehicleInfo,
-                        'selected_garanties' => $selectedGaranties,
-                        'duration_months' => $durationMonths,
-                    ]);
-
-                    if ($companyApiResponse->successful()) {
-                        $companyData = $companyApiResponse->json();
-                        $devis['company_validation'] = $companyData['data'] ?? null;
-                    }
-                } catch (\Exception $e) {
-                    // Log l'erreur mais continue sans validation externe
-                    \Log::warning('Erreur lors de la validation Company API: ' . $e->getMessage());
-                }
-            }
-
-            return response()->json([
-                'success' => true,
-                'message' => 'Devis calculé avec succès',
-                'data' => $devis
-            ]);
-
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Erreur lors du calcul du devis',
-                'error' => $e->getMessage()
-            ], 500);
-        }
-    }
-
-    /**
-     * Créer et sauvegarder un devis
-     */
-    public function store(Request $request): JsonResponse
-    {
-        $validator = Validator::make($request->all(), [
-            'vehicle_info.category' => 'required|string',
-            'vehicle_info.sub_category' => 'nullable|string',
-            'vehicle_info.power_fiscal' => 'required|integer|min:1|max:50',
-            'vehicle_info.year' => 'required|integer|min:1900|max:' . (date('Y') + 1),
-            'vehicle_info.brand' => 'required|string',
-            'vehicle_info.model' => 'required|string',
-            'selected_garanties' => 'required|array|min:1',
-            'selected_garanties.*' => 'string|exists:garanties,name',
-            'duration_months' => 'required|integer|min:1|max:12',
-            'client_name' => 'required|string',
-            'client_email' => 'required|email',
-        ]);
-
-        if ($validator->fails()) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Données invalides',
-                'errors' => $validator->errors()
-            ], 422);
-        }
-
-        try {
-            $vehicleInfo = $request->input('vehicle_info');
-            $selectedGaranties = $request->input('selected_garanties');
-            $durationMonths = $request->input('duration_months');
-
-            // Calculer la prime de base
-            $basePremium = $this->calculateBasePremium($vehicleInfo, $durationMonths);
-            
-            // Calculer les coefficients des garanties
-            $garantieCoefficients = $this->calculateGarantieCoefficients($selectedGaranties);
-            
-            // Calculer la prime totale
-            $garantiesPremium = $basePremium * $garantieCoefficients['total_coefficient'];
-            $taxes = ($basePremium + $garantiesPremium) * config('app.default_tax_rate', 0.20);
-            $totalPremium = $basePremium + $garantiesPremium + $taxes;
-
-            // Créer le devis
-            $devis = Devis::create([
-                'user_id' => auth()->id(),
-                'quote_number' => 'CQ-' . date('YmdHis') . '-' . rand(1000, 9999),
-                'vehicle_info' => $vehicleInfo,
-                'selected_garanties' => $selectedGaranties,
-                'duration_months' => $durationMonths,
-                'base_premium' => round($basePremium, 2),
-                'total_premium' => round($totalPremium, 2),
-                'taxes' => round($taxes, 2),
-                'status' => 'sent',
-                'expires_at' => now()->addDays(30),
-            ]);
-
-            return response()->json([
-                'success' => true,
-                'message' => 'Devis créé avec succès',
-                'data' => $devis
-            ], 201);
-
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Erreur lors de la création du devis',
-                'error' => $e->getMessage()
-            ], 500);
-        }
-    }
-
-    /**
-     * Afficher un devis spécifique
-     */
-    public function show(Devis $devis): JsonResponse
-    {
-        // Vérifier l'autorisation
-        if (auth()->id() !== $devis->user_id && !auth()->user()->canManageContracts()) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Accès non autorisé'
-            ], 403);
-        }
+        $devis = Devis::with(['compagnie', 'vehicule', 'client'])
+            ->where('client_id', auth()->id())
+            ->orderBy('created_at', 'desc')
+            ->get();
 
         return response()->json([
             'success' => true,
@@ -196,46 +31,38 @@ class DevisController extends Controller
     }
 
     /**
-     * Lister les devis
+     * Afficher le formulaire de création
      */
-    public function index(Request $request): JsonResponse
+    public function create()
     {
-        $query = Devis::query();
+        try {
+            $compagnies = Compagnie::where('is_active', true)->get();
+            $periodes = Devis::PERIODES;
 
-        // Filtres selon le rôle
-        if (auth()->user()->isClient()) {
-            $query->where('user_id', auth()->id());
+            return response()->json([
+                'success' => true,
+                'data' => [
+                    'compagnies' => $compagnies,
+                    'periodes' => $periodes
+                ]
+            ]);
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Erreur: ' . $e->getMessage(),
+                'trace' => $e->getTraceAsString()
+            ], 500);
         }
-
-        // Filtres optionnels
-        if ($request->has('status')) {
-            $query->where('status', $request->status);
-        }
-
-        if ($request->has('expired')) {
-            if ($request->expired) {
-                $query->where('expires_at', '<', now());
-            } else {
-                $query->where('expires_at', '>=', now());
-            }
-        }
-
-        $devis = $query->orderBy('created_at', 'desc')->paginate(15);
-
-        return response()->json([
-            'success' => true,
-            'data' => $devis
-        ]);
     }
 
     /**
-     * Obtenir la liste des garanties disponibles
+     * Obtenir les garanties d'une compagnie
      */
-    public function getGaranties(): JsonResponse
+    public function getGarantiesCompagnie($compagnieId)
     {
-        $garanties = Garantie::where('is_active', true)
-            ->orderBy('name')
-            ->get(['id', 'name', 'display_name', 'description', 'coefficient', 'is_required']);
+        $garanties = Garantie::where('compagnie_id', $compagnieId)
+            ->where('statut', 'active')
+            ->get();
 
         return response()->json([
             'success' => true,
@@ -244,99 +71,337 @@ class DevisController extends Controller
     }
 
     /**
-     * Obtenir la grille tarifaire
+     * Calculer un devis
      */
-    public function getTarifs(): JsonResponse
+    public function calculer(Request $request)
     {
-        $tarifs = TarifCategory::where('is_active', true)
-            ->orderBy('name')
-            ->orderBy('power_fiscal_min')
-            ->get();
+        $validator = Validator::make($request->all(), [
+            'vehicule' => 'required|array',
+            'compagnie_id' => 'required|exists:compagnies,id',
+            'periode_police' => 'required|integer|in:1,3,6,12',
+            'garanties_selectionnees' => 'required|array'
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Données invalides',
+                'errors' => $validator->errors()
+            ], 422);
+        }
+
+        try {
+            $calculationService = new DevisCalculationService();
+            
+            $devisCalcule = $calculationService->calculerDevis(
+                $request->vehicule,
+                $request->compagnie_id,
+                $request->periode_police,
+                $request->garanties_selectionnees
+            );
+
+            return response()->json([
+                'success' => true,
+                'message' => 'Devis calculé avec succès',
+                'data' => $devisCalcule
+            ]);
+
+        } catch (\Exception $e) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Erreur lors du calcul: ' . $e->getMessage()
+            ], 500);
+        }
+    }
+
+    /**
+     * Créer un nouveau devis
+     */
+    public function store(Request $request)
+    {
+        $validator = Validator::make($request->all(), [
+            'vehicule' => 'required|array',
+            'compagnie_id' => 'required|exists:compagnies,id',
+            'periode_police' => 'required|integer|in:1,3,6,12',
+            'date_debut' => 'required|date',
+            'garanties_selectionnees' => 'required|array',
+            'carte_grise' => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:2048'
+        ]);
+
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Données invalides',
+                'errors' => $validator->errors()
+            ], 422);
+        }
+
+        // Créer ou récupérer le véhicule
+        $vehicule = $this->creerOuRecupererVehicule($request->vehicule, $request->carte_grise);
+
+        // Simuler le devis pour obtenir le montant
+        $simulation = $this->simulerDevis($request->vehicule, $request->compagnie_id, $request->periode_police, $request->garanties_selectionnees);
+
+        // Créer le devis
+        $devis = Devis::create([
+            'montant' => $simulation['total'],
+            'statut' => Devis::STATUT_EN_ATTENTE,
+            'client_id' => auth()->id(),
+            'compagnie_id' => $request->compagnie_id,
+            'vehicule_id' => $vehicule->id,
+            'periode_police' => $request->periode_police,
+            'date_debut' => $request->date_debut,
+            'garanties_selectionnees' => $request->garanties_selectionnees,
+            'calcul_details' => $simulation['details'],
+            'date_creation' => now(),
+            'date_expiration' => now()->addDays(30)
+        ]);
 
         return response()->json([
             'success' => true,
-            'data' => $tarifs
+            'data' => $devis->load(['compagnie', 'vehicule'])
         ]);
     }
 
     /**
-     * Calculer la prime de base selon la grille tarifaire
+     * Souscrire un devis (créer un contrat)
      */
-    private function calculateBasePremium(array $vehicleInfo, int $durationMonths): float
+    public function souscrire(Request $request)
     {
-        $tarif = TarifCategory::where('name', $vehicleInfo['category'])
-            ->where('sub_category', $vehicleInfo['sub_category'])
-            ->where('power_fiscal_min', '<=', $vehicleInfo['power_fiscal'])
-            ->where('power_fiscal_max', '>=', $vehicleInfo['power_fiscal'])
-            ->where('is_active', true)
-            ->first();
+        $validator = Validator::make($request->all(), [
+            'vehicule' => 'required|array',
+            'compagnie_id' => 'required|exists:compagnies,id',
+            'periode_police' => 'required|integer|in:1,3,6,12',
+            'date_debut' => 'required|date',
+            'garanties_selectionnees' => 'required|array',
+            'carte_grise' => 'nullable|file|mimes:pdf,jpg,jpeg,png|max:5120'
+        ]);
 
-        if (!$tarif) {
-            // Tarif par défaut selon la catégorie
-            $defaultRates = [
-                'Citadine' => 40.00,
-                'SUV' => 60.00,
-                'Berline' => 50.00,
-                'Utilitaire' => 55.00,
-                'Moto' => 30.00
-            ];
-
-            $defaultRate = $defaultRates[$vehicleInfo['category']] ?? 50.00;
-            return $defaultRate * $durationMonths;
+        if ($validator->fails()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Données invalides',
+                'errors' => $validator->errors()
+            ], 422);
         }
 
-        return $tarif->base_rate_monthly * $durationMonths;
+        // Créer ou récupérer le véhicule
+        $vehicule = $this->creerOuRecupererVehicule($request->vehicule, $request->carte_grise);
+
+        // Calculer le devis pour obtenir le montant
+        $calculationService = new DevisCalculationService();
+        $calcul = $calculationService->calculerDevis(
+            $request->vehicule,
+            $request->compagnie_id,
+            $request->periode_police,
+            $request->garanties_selectionnees
+        );
+
+        // Créer le devis avec statut accepté
+        $devis = Devis::create([
+            'montant' => $calcul['total'],
+            'statut' => Devis::STATUT_ACCEPTE, // Directement accepté
+            'client_id' => auth()->id(),
+            'compagnie_id' => $request->compagnie_id,
+            'vehicule_id' => $vehicule->id,
+            'periode_police' => $request->periode_police,
+            'date_debut' => $request->date_debut,
+            'garanties_selectionnees' => $request->garanties_selectionnees,
+            'calcul_details' => $calcul['details'],
+            'date_creation' => now(),
+            'date_expiration' => now()->addDays(30)
+        ]);
+
+        // Créer automatiquement le contrat
+        $contrat = $devis->creerContrat();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Devis souscrit avec succès ! Votre contrat est maintenant actif.',
+            'data' => [
+                'devis' => $devis->load(['compagnie', 'vehicule']),
+                'contrat' => $contrat
+            ]
+        ]);
     }
 
     /**
-     * Calculer les coefficients des garanties
+     * Afficher un devis spécifique
      */
-    private function calculateGarantieCoefficients(array $selectedGaranties): array
+    public function show(Devis $devis)
     {
-        $garanties = Garantie::whereIn('name', $selectedGaranties)
-            ->where('is_active', true)
+        // Vérifier que l'utilisateur peut voir ce devis
+        if ($devis->client_id !== auth()->id() && !auth()->user()->hasRole('admin')) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Accès non autorisé'
+            ], 403);
+        }
+
+        return response()->json([
+            'success' => true,
+            'data' => $devis->load(['compagnie', 'vehicule', 'client'])
+        ]);
+    }
+
+    /**
+     * Accepter un devis
+     */
+    public function accepter(Devis $devis)
+    {
+        if ($devis->client_id !== auth()->id()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Accès non autorisé'
+            ], 403);
+        }
+
+        $devis->accepter();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Devis accepté avec succès',
+            'data' => $devis
+        ]);
+    }
+
+    /**
+     * Rejeter un devis
+     */
+    public function rejeter(Devis $devis)
+    {
+        if ($devis->client_id !== auth()->id()) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Accès non autorisé'
+            ], 403);
+        }
+
+        $devis->rejeter();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Devis rejeté',
+            'data' => $devis
+        ]);
+    }
+
+    /**
+     * Supprimer un devis
+     */
+    public function destroy(Devis $devis)
+    {
+        if ($devis->client_id !== auth()->id() && !auth()->user()->hasRole('admin')) {
+            return response()->json([
+                'success' => false,
+                'message' => 'Accès non autorisé'
+            ], 403);
+        }
+
+        $devis->delete();
+
+        return response()->json([
+            'success' => true,
+            'message' => 'Devis supprimé avec succès'
+        ]);
+    }
+
+    /**
+     * Calculer le montant d'une garantie
+     */
+    private function calculerMontantGarantie($garantie, $vehicule, $periodePolice)
+    {
+        $config = $garantie->tarification_config;
+        
+        switch ($garantie->tarification_type) {
+            case 'fixe':
+                return $config['montant'] ?? 0;
+                
+            case 'pourcentage':
+                $taux = $config['taux'] ?? 0;
+                $valeurVehicule = $vehicule['valeur_vehicule'] ?? 0;
+                return $valeurVehicule * $taux;
+                
+            case 'forfait':
+                return $config['forfait'] ?? 0;
+                
+            default:
+                return 0;
+        }
+    }
+
+    /**
+     * Simuler un devis
+     */
+    private function simulerDevis($vehicule, $compagnieId, $periodePolice, $garantiesSelectionnees)
+    {
+        $garanties = Garantie::where('compagnie_id', $compagnieId)
+            ->whereIn('name', $garantiesSelectionnees)
             ->get();
 
-        $totalCoefficient = 0;
+        $total = 0;
         $details = [];
 
         foreach ($garanties as $garantie) {
-            $totalCoefficient += $garantie->coefficient;
+            $montant = $this->calculerMontantGarantie($garantie, $vehicule, $periodePolice);
+            $total += $montant;
+            
             $details[] = [
-                'name' => $garantie->name,
-                'display_name' => $garantie->display_name,
-                'coefficient' => $garantie->coefficient,
-                'is_required' => $garantie->is_required,
+                'garantie' => $garantie->display_name,
+                'type' => $garantie->tarification_type,
+                'montant' => $montant,
+                'config' => $garantie->tarification_config
             ];
         }
 
         return [
-            'total_coefficient' => $totalCoefficient,
+            'total' => $total,
             'details' => $details
         ];
     }
 
     /**
-     * Récupérer les compagnies disponibles
+     * Créer ou récupérer un véhicule
      */
-    public function getCompagnies(): JsonResponse
+    private function creerOuRecupererVehicule($vehiculeData, $carteGrise = null)
     {
-        try {
-            $compagnies = \App\Models\Compagnie::where('is_active', true)
-                ->orderBy('nom')
-                ->get(['id', 'nom', 'description']);
+        // Vérifier si le véhicule existe déjà
+        $vehicule = Vehicule::where('immatriculation', $vehiculeData['immatriculation'])
+            ->where('user_id', auth()->id())
+            ->first();
 
-            return response()->json([
-                'success' => true,
-                'data' => $compagnies,
-                'message' => 'Compagnies récupérées avec succès'
-            ]);
-        } catch (\Exception $e) {
-            return response()->json([
-                'success' => false,
-                'message' => 'Erreur lors de la récupération des compagnies',
-                'error' => $e->getMessage()
-            ], 500);
+        if ($vehicule) {
+            return $vehicule;
         }
+
+        // Traiter la carte grise si fournie
+        $carteGrisePath = null;
+        if ($carteGrise) {
+            $carteGrisePath = $carteGrise->store('cartes_grise', 'public');
+        }
+
+        // Créer le nouveau véhicule
+        $vehicule = Vehicule::create([
+            'marque_vehicule' => $vehiculeData['marque_vehicule'],
+            'modele' => $vehiculeData['modele'],
+            'immatriculation' => $vehiculeData['immatriculation'],
+            'categorie' => $vehiculeData['categorie'],
+            'puissance_fiscale' => $vehiculeData['puissance_fiscale'],
+            'date_mise_en_circulation' => $vehiculeData['date_mise_en_circulation'],
+            'valeur_vehicule' => $vehiculeData['valeur_vehicule'],
+            'valeur_venale' => $vehiculeData['valeur_venale'],
+            'numero_chassis' => $vehiculeData['numero_chassis'],
+            'energie' => $vehiculeData['energie'],
+            'places' => $vehiculeData['places'],
+            'proprietaire_nom' => $vehiculeData['proprietaire_nom'],
+            'proprietaire_prenom' => $vehiculeData['proprietaire_prenom'],
+            'proprietaire_adresse' => $vehiculeData['proprietaire_adresse'],
+            'proprietaire_telephone' => $vehiculeData['proprietaire_telephone'],
+            'proprietaire_email' => $vehiculeData['proprietaire_email'],
+            'carte_grise' => $carteGrisePath,
+            'user_id' => auth()->id()
+        ]);
+
+        return $vehicule;
     }
 }

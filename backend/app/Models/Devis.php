@@ -4,189 +4,148 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class Devis extends Model
 {
     use HasFactory;
 
+    protected $table = 'devis';
+
     protected $fillable = [
-        'user_id',
-        'quote_number',
-        'vehicle_info',
-        'selected_garanties',
-        'duration_months',
-        'base_premium',
-        'total_premium',
-        'taxes',
-        'status',
-        'expires_at',
+        'montant',
+        'statut',
+        'client_id',
+        'compagnie_id',
+        'vehicule_id',
+        'periode_police',
+        'date_debut',
+        'garanties_selectionnees',
+        'calcul_details',
+        'date_creation',
+        'date_expiration'
     ];
 
     protected $casts = [
-        'vehicle_info' => 'array',
-        'selected_garanties' => 'array',
-        'base_premium' => 'decimal:2',
-        'total_premium' => 'decimal:2',
-        'taxes' => 'decimal:2',
-        'expires_at' => 'datetime',
+        'montant' => 'decimal:2',
+        'garanties_selectionnees' => 'array',
+        'calcul_details' => 'array',
+        'date_debut' => 'date',
+        'date_creation' => 'datetime',
+        'date_expiration' => 'datetime'
     ];
 
-    /**
-     * Relation avec l'utilisateur
-     */
-    public function user(): BelongsTo
+    // Relations selon le diagramme UML
+    public function client()
     {
-        return $this->belongsTo(User::class);
+        return $this->belongsTo(User::class, 'client_id');
     }
 
-    /**
-     * Scope pour les devis actifs (non expirés)
-     */
-    public function scopeActive($query)
+    public function compagnie()
     {
-        return $query->where('expires_at', '>', now());
+        return $this->belongsTo(Compagnie::class);
     }
 
-    /**
-     * Scope pour les devis expirés
-     */
-    public function scopeExpired($query)
+    public function vehicule()
     {
-        return $query->where('expires_at', '<=', now());
+        return $this->belongsTo(Vehicule::class);
     }
 
-    /**
-     * Scope pour un statut spécifique
-     */
-    public function scopeByStatus($query, $status)
+    public function contrats()
     {
-        return $query->where('status', $status);
+        return $this->hasMany(Contrat::class);
     }
 
-    /**
-     * Vérifier si le devis est expiré
-     */
-    public function isExpired(): bool
+    public function paiements()
     {
-        return $this->expires_at->isPast();
+        return $this->hasMany(Paiement::class);
     }
 
-    /**
-     * Vérifier si le devis est actif
-     */
-    public function isActive(): bool
+    // Statuts possibles
+    const STATUT_EN_ATTENTE = 'en_attente';
+    const STATUT_ACCEPTE = 'accepte';
+    const STATUT_REJETE = 'rejete';
+    const STATUT_EXPIRE = 'expire';
+
+    // Périodes de police
+    const PERIODES = [
+        1 => '1 mois',
+        3 => '3 mois',
+        6 => '6 mois',
+        12 => '12 mois'
+    ];
+
+    // Scopes utiles
+    public function scopeEnAttente($query)
     {
-        return !$this->isExpired() && $this->status !== 'expired';
+        return $query->where('statut', self::STATUT_EN_ATTENTE);
     }
 
-    /**
-     * Vérifier si le devis peut être accepté
-     */
-    public function canBeAccepted(): bool
+    public function scopeAcceptes($query)
     {
-        return $this->isActive() && $this->status === 'sent';
+        return $query->where('statut', self::STATUT_ACCEPTE);
     }
 
-    /**
-     * Marquer le devis comme accepté
-     */
-    public function accept(): void
+    public function scopeExpires($query)
     {
-        $this->update(['status' => 'accepted']);
+        return $query->where('statut', self::STATUT_EXPIRE);
     }
 
-    /**
-     * Marquer le devis comme expiré
-     */
-    public function markAsExpired(): void
+    // Méthodes utilitaires
+    public function estValide()
     {
-        $this->update(['status' => 'expired']);
+        return $this->statut === self::STATUT_EN_ATTENTE && 
+               $this->date_expiration > now();
     }
 
-    /**
-     * Obtenir les informations du véhicule
-     */
-    public function getVehicleInfo(): array
+    public function accepter()
     {
-        return $this->vehicle_info ?? [];
+        $this->update(['statut' => self::STATUT_ACCEPTE]);
     }
 
-    /**
-     * Obtenir la marque du véhicule
-     */
-    public function getVehicleBrand(): ?string
+    public function rejeter()
     {
-        return $this->vehicle_info['brand'] ?? null;
+        $this->update(['statut' => self::STATUT_REJETE]);
     }
 
-    /**
-     * Obtenir le modèle du véhicule
-     */
-    public function getVehicleModel(): ?string
+    public function expirer()
     {
-        return $this->vehicle_info['model'] ?? null;
+        $this->update(['statut' => self::STATUT_EXPIRE]);
     }
 
-    /**
-     * Obtenir la catégorie du véhicule
-     */
-    public function getVehicleCategory(): ?string
+    // Calcul du montant total
+    public function calculerMontantTotal()
     {
-        return $this->vehicle_info['category'] ?? null;
-    }
-
-    /**
-     * Obtenir la puissance fiscale du véhicule
-     */
-    public function getVehiclePowerFiscal(): ?int
-    {
-        return $this->vehicle_info['power_fiscal'] ?? null;
-    }
-
-    /**
-     * Obtenir l'année du véhicule
-     */
-    public function getVehicleYear(): ?int
-    {
-        return $this->vehicle_info['year'] ?? null;
-    }
-
-    /**
-     * Obtenir la prime mensuelle
-     */
-    public function getMonthlyPremium(): float
-    {
-        return round($this->total_premium / $this->duration_months, 2);
-    }
-
-    /**
-     * Obtenir le nombre de jours restants avant expiration
-     */
-    public function getDaysUntilExpiry(): int
-    {
-        return $this->expires_at->diffInDays(now(), false);
-    }
-
-    /**
-     * Générer un nouveau numéro de devis
-     */
-    public static function generateQuoteNumber(): string
-    {
-        return 'CQ-' . date('YmdHis') . '-' . str_pad(static::count() + 1, 6, '0', STR_PAD_LEFT);
-    }
-
-    /**
-     * Boot method pour générer automatiquement le numéro de devis
-     */
-    protected static function boot()
-    {
-        parent::boot();
-
-        static::creating(function ($devis) {
-            if (empty($devis->quote_number)) {
-                $devis->quote_number = static::generateQuoteNumber();
+        $total = 0;
+        
+        if (isset($this->calcul_details['garanties'])) {
+            foreach ($this->calcul_details['garanties'] as $garantie) {
+                $total += $garantie['montant'];
             }
-        });
+        }
+
+        return $total;
+    }
+
+    // Formatage pour l'affichage
+    public function getMontantFormateAttribute()
+    {
+        return number_format($this->montant, 0, ',', ' ') . ' FCFA';
+    }
+
+    public function getPeriodeFormateeAttribute()
+    {
+        return self::PERIODES[$this->periode_police] ?? 'Inconnue';
+    }
+
+    public function getStatutFormateAttribute()
+    {
+        $statuts = [
+            self::STATUT_EN_ATTENTE => 'En attente',
+            self::STATUT_ACCEPTE => 'Accepté',
+            self::STATUT_REJETE => 'Rejeté',
+            self::STATUT_EXPIRE => 'Expiré'
+        ];
+
+        return $statuts[$this->statut] ?? 'Inconnu';
     }
 }

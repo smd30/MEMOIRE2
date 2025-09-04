@@ -29,11 +29,14 @@ class UserSeeder extends Seeder
     {
         $users = [
             [
-                'name' => 'Mamadou Ndiaye',
+                'nom' => 'Ndiaye',
+                'prenom' => 'Mamadou',
                 'email' => 'ndiaye@gmail.com',
-                'phone' => '+221 77 123 45 67',
-                'password' => 'password',
+                'Telephone' => '+221 77 123 45 67',
+                'MotDePasse' => Hash::make('password'),
                 'role' => 'client',
+                'statut' => 'actif',
+                'adresse' => '123 Rue de la Paix, Dakar',
                 'profile' => [
                     'address' => '123 Rue de la Paix',
                     'city' => 'Dakar',
@@ -47,11 +50,14 @@ class UserSeeder extends Seeder
                 ],
             ],
             [
-                'name' => 'Client Test',
+                'nom' => 'Test',
+                'prenom' => 'Client',
                 'email' => 'client@test.com',
-                'phone' => '+33123456789',
-                'password' => 'password',
+                'Telephone' => '+33123456789',
+                'MotDePasse' => Hash::make('password'),
                 'role' => 'client',
+                'statut' => 'actif',
+                'adresse' => '123 Rue de la Paix, Paris',
                 'profile' => [
                     'address' => '123 Rue de la Paix',
                     'city' => 'Paris',
@@ -65,11 +71,14 @@ class UserSeeder extends Seeder
                 ],
             ],
             [
-                'name' => 'Gestionnaire Test',
+                'nom' => 'Test',
+                'prenom' => 'Gestionnaire',
                 'email' => 'gestionnaire@test.com',
-                'phone' => '+33123456790',
-                'password' => 'password',
+                'Telephone' => '+33123456790',
+                'MotDePasse' => Hash::make('password'),
                 'role' => 'gestionnaire',
+                'statut' => 'actif',
+                'adresse' => '456 Avenue des Champs, Lyon',
                 'profile' => [
                     'address' => '456 Avenue des Champs',
                     'city' => 'Lyon',
@@ -83,11 +92,14 @@ class UserSeeder extends Seeder
                 ],
             ],
             [
-                'name' => 'Admin Test',
+                'nom' => 'Test',
+                'prenom' => 'Admin',
                 'email' => 'admin@test.com',
-                'phone' => '+33123456791',
-                'password' => 'password',
+                'Telephone' => '+33123456791',
+                'MotDePasse' => Hash::make('password'),
                 'role' => 'admin',
+                'statut' => 'actif',
+                'adresse' => '789 Boulevard Central, Marseille',
                 'profile' => [
                     'address' => '789 Boulevard Central',
                     'city' => 'Marseille',
@@ -108,11 +120,14 @@ class UserSeeder extends Seeder
 
             // Créer l'utilisateur
             $user = User::create([
-                'name' => $userData['name'],
+                'nom' => $userData['nom'],
+                'prenom' => $userData['prenom'],
                 'email' => $userData['email'],
-                'phone' => $userData['phone'],
-                'password' => Hash::make($userData['password']),
-                'is_active' => true,
+                'Telephone' => $userData['Telephone'],
+                'MotDePasse' => $userData['MotDePasse'],
+                'role' => $userData['role'],
+                'statut' => $userData['statut'],
+                'adresse' => $userData['adresse'],
             ]);
 
             // Créer le profil client
@@ -128,12 +143,6 @@ class UserSeeder extends Seeder
                 'driving_experience_years' => $profile['driving_experience_years'],
                 'has_garage' => $profile['has_garage'],
             ]);
-
-            // Assigner le rôle
-            $role = Role::where('name', $userData['role'])->first();
-            if ($role) {
-                $user->roles()->attach($role->id);
-            }
 
             $this->command->info("Utilisateur {$user->email} créé avec le rôle {$userData['role']}");
         }

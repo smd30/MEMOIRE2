@@ -6,6 +6,7 @@ use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\VehicleController;
 use App\Http\Controllers\Api\ContractController;
 use App\Http\Controllers\Api\DevisController;
+use App\Http\Controllers\Api\MarqueController;
 use App\Http\Controllers\Api\SinistreController;
 use App\Http\Controllers\Api\GestionnaireController;
 use App\Http\Controllers\Api\AdminController;
@@ -30,8 +31,16 @@ Route::post('/auth/login', [AuthController::class, 'login']);
 Route::get('/devis/garanties', [DevisController::class, 'getGaranties']);
 Route::get('/devis/compagnies', [DevisController::class, 'getCompagnies']);
 Route::post('/devis/tarifs', [DevisController::class, 'calculateTarif']);
+Route::get('/devis/garanties/{compagnieId}', [DevisController::class, 'getGarantiesCompagnie']);
+Route::post('/devis/calculer', [DevisController::class, 'calculer']);
 
 // Routes protégées par authentification
+// Routes pour les marques et modèles (publiques)
+Route::get('/marques', [MarqueController::class, 'index']);
+Route::get('/marques/search', [MarqueController::class, 'search']);
+Route::get('/marques/{marqueId}/modeles', [MarqueController::class, 'getModeles']);
+Route::get('/marques-with-modeles', [MarqueController::class, 'getAllWithModeles']);
+
 Route::middleware('auth:sanctum')->group(function () {
     // Auth
     Route::post('/auth/logout', [AuthController::class, 'logout']);
@@ -60,6 +69,16 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/contracts/{contract}', [ContractController::class, 'show']);
     Route::put('/contracts/{contract}', [ContractController::class, 'update']);
     Route::delete('/contracts/{contract}', [ContractController::class, 'destroy']);
+
+    // Devis
+    Route::get('/devis', [DevisController::class, 'index']);
+    Route::get('/devis/create', [DevisController::class, 'create']);
+    Route::post('/devis', [DevisController::class, 'store']);
+    Route::post('/devis/souscrire', [DevisController::class, 'souscrire']);
+    Route::get('/devis/{devis}', [DevisController::class, 'show']);
+    Route::post('/devis/{devis}/accepter', [DevisController::class, 'accepter']);
+    Route::post('/devis/{devis}/rejeter', [DevisController::class, 'rejeter']);
+    Route::delete('/devis/{devis}', [DevisController::class, 'destroy']);
 
     // Sinistres
     Route::get('/sinistres', [SinistreController::class, 'index']);
