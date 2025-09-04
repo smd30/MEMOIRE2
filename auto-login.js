@@ -57,3 +57,5 @@ console.log('2. Copiez et collez ce script');
 console.log('3. Ou utilisez les identifiants manuellement:');
 console.log('   • Email: client@test.com');
 console.log('   • Mot de passe: password123');
+
+

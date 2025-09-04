@@ -297,3 +297,5 @@ Détection expiration → Déconnexion forcée → Nettoyage → Redirection log
 **Version** : 1.0.0  
 **Dernière mise à jour** : Mars 2024  
 **Conformité** : ✅ Complète
+
+

@@ -122,3 +122,5 @@ echo "📋 Identifiants de connexion:\n";
 echo "   • Email: client@test.com\n";
 echo "   • Mot de passe: password123\n";
 echo "\n🔗 Accédez à http://localhost:4200 pour tester le frontend\n";
+
+

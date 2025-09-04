@@ -211,3 +211,5 @@ Route::post('/admin/system/cache/clear', [AdminController::class, 'clearCache'])
 **Status :** ✅ Problème de persistance résolu  
 **Date :** Mars 2024  
 **Version :** 1.0.0
+
+

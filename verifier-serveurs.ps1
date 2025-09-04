@@ -35,3 +35,5 @@ Write-Host "5. Cliquez sur 'Nouveau devis'" -ForegroundColor White
 Write-Host "6. Testez le formulaire multi-étapes" -ForegroundColor White
 Write-Host ""
 Write-Host "🎉 Le module devis est maintenant prêt à être testé !" -ForegroundColor Green
+
+

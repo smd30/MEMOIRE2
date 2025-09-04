@@ -46,3 +46,5 @@ Write-Host "   • Routes → Layout principal pour toutes les pages protégées
 Write-Host ""
 
 Write-Host "🎉 Le problème de session est maintenant résolu !" -ForegroundColor Green
+
+

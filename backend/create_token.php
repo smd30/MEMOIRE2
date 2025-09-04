@@ -22,3 +22,5 @@ $token = $user->createToken('test-token')->plainTextToken;
 echo "Token d'authentification créé:\n";
 echo $token . "\n";
 echo "\nUtilisez ce token dans l'en-tête Authorization: Bearer <token>\n";
+
+

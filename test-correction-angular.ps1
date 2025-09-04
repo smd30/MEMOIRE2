@@ -37,3 +37,5 @@ Write-Host "   • Vérifiez les logs 'Garanties loaded:' dans la console" -Fore
 Write-Host ""
 
 Write-Host "🎉 Les erreurs Angular sont maintenant corrigées !" -ForegroundColor Green
+
+

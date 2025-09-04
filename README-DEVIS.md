@@ -177,3 +177,5 @@ Pour toute question ou problème :
 - Vérifier les logs Laravel : `storage/logs/laravel.log`
 - Vérifier la console Angular : F12 → Console
 - Tester l'API directement avec Postman ou curl
+
+

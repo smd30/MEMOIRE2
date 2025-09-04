@@ -186,3 +186,5 @@ protected $casts = [
 **Status :** ✅ Tous les problèmes corrigés  
 **Date :** Mars 2024  
 **Version :** 1.0.0
+
+

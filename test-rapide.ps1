@@ -28,3 +28,5 @@ Write-Host "quand les tables seront créées dans la base de données." -Foregro
 Write-Host ""
 
 Write-Host "🎉 Le système est maintenant opérationnel !" -ForegroundColor Green
+
+

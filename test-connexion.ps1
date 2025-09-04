@@ -27,3 +27,5 @@ Write-Host "   • Admin: admin@test.com / password" -ForegroundColor White
 Write-Host ""
 
 Write-Host "🎉 La connexion devrait maintenant fonctionner !" -ForegroundColor Green
+
+

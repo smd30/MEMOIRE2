@@ -19,3 +19,5 @@ curl_close($ch);
 echo "Code de réponse HTTP: " . $httpCode . "\n";
 echo "Réponse:\n";
 echo $response . "\n";
+
+

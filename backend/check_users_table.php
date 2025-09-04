@@ -13,3 +13,5 @@ $columns = DB::select('DESCRIBE users');
 foreach($columns as $col) {
     echo $col->Field . ' - ' . $col->Type . ' - ' . $col->Null . "\n";
 }
+
+

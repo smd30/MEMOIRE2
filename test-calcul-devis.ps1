@@ -55,3 +55,5 @@ Write-Host "4. Vérifiez que le calcul s'affiche correctement" -ForegroundColor 
 Write-Host ""
 
 Write-Host "🎉 Le système de calcul est maintenant opérationnel !" -ForegroundColor Green
+
+

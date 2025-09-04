@@ -243,3 +243,5 @@ class Vehicule extends Model
         });
     }
 }
+
+

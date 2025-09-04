@@ -201,3 +201,5 @@ L'interface respecte parfaitement le diagramme de cas d'usage UML :
 - [ ] Intégration de nouvelles fonctionnalités
 - [ ] Amélioration de l'accessibilité
 - [ ] Documentation utilisateur détaillée
+
+

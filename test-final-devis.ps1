@@ -36,3 +36,5 @@ Write-Host "   • Authentification préservée" -ForegroundColor White
 Write-Host ""
 
 Write-Host "🎉 Le module devis est maintenant entièrement fonctionnel !" -ForegroundColor Green
+
+

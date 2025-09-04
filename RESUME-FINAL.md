@@ -142,3 +142,5 @@ Utilisateur → Connexion → DEVIS → Nouveau devis → Formulaire 4 étapes �
 - **Responsive design** : Compatible mobile/tablet/desktop
 
 ## 🎉 **Le module devis est maintenant entièrement fonctionnel et prêt à être utilisé !**
+
+

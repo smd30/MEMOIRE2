@@ -121,3 +121,5 @@ echo "✅ Authentification OK\n";
 echo "✅ Simulation de tarification OK\n";
 echo "\n";
 echo "🎉 Le module devis est prêt à être utilisé !\n";
+
+

@@ -38,3 +38,5 @@ Write-Host "   • Navigation dans la navbar" -ForegroundColor White
 Write-Host ""
 
 Write-Host "🎉 Le module devis est maintenant entièrement fonctionnel avec navbar !" -ForegroundColor Green
+
+

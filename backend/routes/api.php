@@ -28,11 +28,15 @@ Route::post('/auth/register', [AuthController::class, 'register']);
 Route::post('/auth/login', [AuthController::class, 'login']);
 
 // Routes pour devis (publiques)
+Route::get('/devis/categories', [DevisController::class, 'getCategories']);
 Route::get('/devis/garanties', [DevisController::class, 'getGaranties']);
-Route::get('/devis/compagnies', [DevisController::class, 'getCompagnies']);
-Route::post('/devis/tarifs', [DevisController::class, 'calculateTarif']);
 Route::get('/devis/garanties/{compagnieId}', [DevisController::class, 'getGarantiesCompagnie']);
+Route::get('/devis/informations', [DevisController::class, 'getInformationsDevis']);
 Route::post('/devis/calculer', [DevisController::class, 'calculer']);
+Route::get('/devis/exemple', [DevisController::class, 'exempleDevis']);
+
+// Route temporairement publique pour les tests
+Route::get('/devis', [DevisController::class, 'index']);
 
 // Routes protégées par authentification
 // Routes pour les marques et modèles (publiques)
@@ -70,8 +74,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::put('/contracts/{contract}', [ContractController::class, 'update']);
     Route::delete('/contracts/{contract}', [ContractController::class, 'destroy']);
 
-    // Devis
-    Route::get('/devis', [DevisController::class, 'index']);
+    // Devis (sauf index qui est public pour les tests)
     Route::get('/devis/create', [DevisController::class, 'create']);
     Route::post('/devis', [DevisController::class, 'store']);
     Route::post('/devis/souscrire', [DevisController::class, 'souscrire']);

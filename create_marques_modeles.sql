@@ -147,3 +147,5 @@ INSERT INTO `modeles` (`marque_id`, `nom`, `categorie_vehicule`, `created_at`, `
 (18, 'FZ 150', 'deux_trois_roues', NOW(), NOW()),
 (18, 'FZ 250', 'deux_trois_roues', NOW(), NOW()),
 (18, 'MT-07', 'deux_trois_roues', NOW(), NOW());
+
+

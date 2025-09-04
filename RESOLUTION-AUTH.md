@@ -68,3 +68,5 @@ php test-devis-complet.php
 - **Logs Laravel** : `backend/storage/logs/laravel.log`
 - **Console Angular** : F12 → Console
 - **Network** : F12 → Network pour voir les requêtes API
+
+

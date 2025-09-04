@@ -29,3 +29,5 @@ Write-Host "✅ Le système d'inscription fonctionne parfaitement !" -Foreground
 Write-Host ""
 Write-Host "Appuyez sur une touche pour fermer..." -ForegroundColor Gray
 $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
+
+

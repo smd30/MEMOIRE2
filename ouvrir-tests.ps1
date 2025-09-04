@@ -23,3 +23,5 @@ Write-Host "🎯 Testez l'inscription avec vos données réelles !" -ForegroundC
 Write-Host ""
 Write-Host "Appuyez sur une touche pour fermer..." -ForegroundColor Gray
 $null = $Host.UI.RawUI.ReadKey("NoEcho,IncludeKeyDown")
+
+

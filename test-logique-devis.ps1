@@ -45,3 +45,5 @@ Write-Host "   • POST /api/devis/souscrire" -ForegroundColor White
 Write-Host ""
 
 Write-Host "🎉 La logique devis est maintenant correcte !" -ForegroundColor Green
+
+

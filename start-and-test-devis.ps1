@@ -49,3 +49,5 @@ Write-Host "Appuyez sur Ctrl+C pour arrêter ce script..." -ForegroundColor Red
 while ($true) {
     Start-Sleep -Seconds 10
 }
+
+
