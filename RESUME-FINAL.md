@@ -144,3 +144,4 @@ Utilisateur → Connexion → DEVIS → Nouveau devis → Formulaire 4 étapes �
 ## 🎉 **Le module devis est maintenant entièrement fonctionnel et prêt à être utilisé !**
 
 
+

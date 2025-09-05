@@ -57,3 +57,4 @@ Write-Host ""
 Write-Host "🎉 Le système de calcul est maintenant opérationnel !" -ForegroundColor Green
 
 
+

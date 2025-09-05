@@ -28,8 +28,8 @@ return [
     | sending an e-mail. You will specify which one you are using for your
     | mailers below. You are free to add additional mailers as required.
     |
-    | Supported: "smtp", "sendmail", "mailgun", "ses",
-    |            "postmark", "log", "array", "failover"
+    | Supported drivers: "smtp", "sendmail", "mailgun", "ses",
+    |                    "postmark", "log", "array", "failover"
     |
     */
 
@@ -37,9 +37,10 @@ return [
 
         'smtp' => [
             'transport' => 'smtp',
-            'host' => env('MAIL_HOST', 'mailhog'),
-            'port' => env('MAIL_PORT', 1025),
-            'encryption' => env('MAIL_ENCRYPTION'),
+            'url' => env('MAIL_URL'),
+            'host' => env('MAIL_HOST', 'smtp.mailgun.org'),
+            'port' => env('MAIL_PORT', 587),
+            'encryption' => env('MAIL_ENCRYPTION', 'tls'),
             'username' => env('MAIL_USERNAME'),
             'password' => env('MAIL_PASSWORD'),
             'timeout' => null,
@@ -60,7 +61,7 @@ return [
 
         'sendmail' => [
             'transport' => 'sendmail',
-            'path' => '/usr/sbin/sendmail -bs -i',
+            'path' => env('MAIL_SENDMAIL_PATH', '/usr/sbin/sendmail -bs -i'),
         ],
 
         'log' => [
@@ -79,7 +80,6 @@ return [
                 'log',
             ],
         ],
-
     ],
 
     /*
@@ -94,8 +94,8 @@ return [
     */
 
     'from' => [
-        'address' => env('MAIL_FROM_ADDRESS', 'noreply@assurance-auto.com'),
-        'name' => env('MAIL_FROM_NAME', 'Assurance Auto'),
+        'address' => env('MAIL_FROM_ADDRESS', 'hello@example.com'),
+        'name' => env('MAIL_FROM_NAME', 'Example'),
     ],
 
     /*
@@ -103,15 +103,14 @@ return [
     | Markdown Mail Settings
     |--------------------------------------------------------------------------
     |
-    | If you are using Markdown based email templates, then you can configure
-    | the theme and component paths here, allowing you to customize the
-    | look and feel of your emails. Or, you may simply stick with the
-    | default array.
+    | If you are sending Markdown based email e-mails, you may configure the
+    | theme and component paths here, allowing you to customize the design
+    | of the emails. Or, you may simply stick with the Laravel defaults!
     |
     */
 
     'markdown' => [
-        'theme' => 'default',
+        'theme' => env('MAIL_MARKDOWN_THEME', 'default'),
 
         'paths' => [
             resource_path('views/vendor/mail'),
