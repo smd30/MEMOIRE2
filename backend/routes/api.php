@@ -233,9 +233,10 @@ Route::post('/souscription-ultra-simple', [App\Http\Controllers\Api\Souscription
 
 // Route de souscription PRINCIPALE QUI FONCTIONNE (envoi au propriétaire du véhicule)
 Route::post('/souscription', [App\Http\Controllers\Api\SouscriptionController::class, 'souscrire']);
+Route::post('/test-souscription', [App\Http\Controllers\Api\TestSouscriptionController::class, 'testSouscription']);
+Route::post('/test-qr-code', [App\Http\Controllers\Api\SimpleTestController::class, 'testQRCode']);
 
 // Routes de test
-Route::post('/test-souscription', [App\Http\Controllers\Api\TestSouscriptionController::class, 'test']);
 Route::post('/test-models', [App\Http\Controllers\Api\TestSouscriptionController::class, 'testModels']);
 
 // Routes protégées par authentification

@@ -58,3 +58,5 @@ Write-Host "🎉 Le système de calcul est maintenant opérationnel !" -Foregrou
 
 
 
+
+

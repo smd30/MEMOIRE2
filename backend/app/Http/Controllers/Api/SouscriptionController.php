@@ -97,7 +97,8 @@ class SouscriptionController extends Controller
                 $pdfGenerated = true;
                 
                 // 5. Envoyer l'email avec le PDF attaché AU PROPRIÉTAIRE DU VÉHICULE
-                $emailSent = $this->emailService->envoyerAttestation($contrat, $pdfBase64);
+                // Temporairement désactivé pour tester le QR Code
+                $emailSent = false; // $this->emailService->envoyerAttestation($contrat, $pdfBase64);
                 
             } catch (\Exception $e) {
                 \Log::error('Erreur génération PDF/Email:', ['error' => $e->getMessage()]);
@@ -158,6 +159,7 @@ class SouscriptionController extends Controller
                     'email_destinataire' => $user->email, // Email du propriétaire du véhicule
                     'attestation_pdf' => $pdfGenerated ? $pdfBase64 : null,
                     'pdf_filename' => $pdfGenerated ? 'Attestation_' . $contrat->numero_attestation . '.pdf' : null,
+                    'qr_code_data' => $this->genererQRCodeData($contrat, $vehicule, $user),
                     'message' => $pdfGenerated && $emailSent ? 
                         'Votre contrat a été créé avec succès. L\'attestation PDF a été envoyée par email.' : 
                         ($emailSent ? 'Votre contrat a été créé avec succès. Un email de confirmation a été envoyé.' :
@@ -173,5 +175,26 @@ class SouscriptionController extends Controller
                 'line' => $e->getLine()
             ], 500);
         }
+    }
+    
+    /**
+     * Génère les données pour le QR Code
+     */
+    private function genererQRCodeData($contrat, $vehicule, $user): array
+    {
+        return [
+            'contrat_id' => $contrat->id,
+            'numero_attestation' => $contrat->numero_attestation,
+            'numero_police' => $contrat->numero_police,
+            'vehicule_marque' => $vehicule->marque_vehicule,
+            'vehicule_modele' => $vehicule->modele,
+            'immatriculation' => $vehicule->immatriculation,
+            'date_debut' => $contrat->date_debut->format('Y-m-d'),
+            'date_fin' => $contrat->date_fin->format('Y-m-d'),
+            'proprietaire_nom' => $user->nom,
+            'proprietaire_prenom' => $user->prenom,
+            'prime_ttc' => $contrat->prime_ttc,
+            'verification_url' => url('/verification/' . $contrat->numero_attestation)
+        ];
     }
 }

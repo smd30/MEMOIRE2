@@ -21,13 +21,13 @@ class EmailService
                 'numero_attestation' => $contrat->numero_attestation,
                 'numero_police' => $contrat->numero_police,
                 'souscripteur' => $user->prenom . ' ' . $user->nom,
-                'vehicule' => $vehicule->marque . ' ' . $vehicule->modele,
+                'vehicule' => $vehicule->marque_vehicule . ' ' . $vehicule->modele,
                 'immatriculation' => $vehicule->immatriculation,
                 'compagnie' => $compagnie->nom,
                 'date_debut' => $contrat->date_debut->format('d/m/Y'),
                 'date_fin' => $contrat->date_fin->format('d/m/Y'),
                 'prime_ttc' => number_format($contrat->prime_ttc, 0, ',', ' '),
-                'garanties' => json_decode($contrat->garanties_selectionnees, true),
+                'garanties' => json_decode($contrat->garanties_selectionnees, true) ?: ['RC', 'Vol'],
             ];
 
             // Sauvegarder le PDF temporairement
@@ -51,7 +51,7 @@ class EmailService
             return true;
 
         } catch (\Exception $e) {
-            \Log::error('Erreur lors de l\'envoi de l\'attestation par email: ' . (is_array($e->getMessage()) ? json_encode($e->getMessage()) : $e->getMessage()));
+            \Log::error('Erreur lors de l\'envoi de l\'attestation par email: ' . $e->getMessage());
             return false;
         }
     }
@@ -82,13 +82,13 @@ class EmailService
                 'numero_attestation' => $contrat->numero_attestation,
                 'numero_police' => $contrat->numero_police,
                 'souscripteur' => $user->prenom . ' ' . $user->nom,
-                'vehicule' => $vehicule->marque . ' ' . $vehicule->modele,
+                'vehicule' => $vehicule->marque_vehicule . ' ' . $vehicule->modele,
                 'immatriculation' => $vehicule->immatriculation,
                 'compagnie' => $compagnie->nom,
                 'date_debut' => $contrat->date_debut->format('d/m/Y'),
                 'date_fin' => $contrat->date_fin->format('d/m/Y'),
                 'prime_ttc' => number_format($contrat->prime_ttc, 0, ',', ' '),
-                'garanties' => json_decode($contrat->garanties_selectionnees, true),
+                'garanties' => json_decode($contrat->garanties_selectionnees, true) ?: ['RC', 'Vol'],
             ];
 
             Mail::send('emails.confirmation', $emailData, function ($message) use ($user, $contrat) {

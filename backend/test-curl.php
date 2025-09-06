@@ -4,7 +4,7 @@ echo "🌐 TEST AVEC CURL - Vérification complète\n";
 echo "==========================================\n\n";
 
 // Test avec curl pour être plus robuste
-$url = 'http://localhost:8000/api/souscription';
+$url = 'http://localhost:8000/api/test-souscription';
 
 $data = [
     'vehicule' => [

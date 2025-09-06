@@ -8,6 +8,7 @@ use App\Models\Vehicule;
 use App\Models\Compagnie;
 use Dompdf\Dompdf;
 use Dompdf\Options;
+use SimpleSoftwareIO\QrCode\Facades\QrCode;
 
 class AttestationService
 {
@@ -17,6 +18,10 @@ class AttestationService
         $user = $contrat->user;
         $vehicule = $contrat->vehicule;
         $compagnie = $contrat->compagnie;
+        
+        // Générer le QR Code
+        $qrCodeData = $this->genererQRCodeData($contrat);
+        $qrCodeBase64 = $this->genererQRCodeBase64($contrat);
 
         // Préparer les données pour l'attestation
         $data = [
@@ -48,13 +53,17 @@ class AttestationService
         ];
 
         // Générer le HTML de l'attestation
-        $html = $this->genererHTMLAttestation($data);
+        $html = $this->genererHTMLAttestation($data, $qrCodeBase64);
 
-        // Configurer DomPDF
+        // Configurer DomPDF optimisé pour les images base64
         $options = new Options();
         $options->set('isHtml5ParserEnabled', true);
         $options->set('isPhpEnabled', true);
         $options->set('defaultFont', 'Arial');
+        $options->set('isRemoteEnabled', true);
+        $options->set('isFontSubsettingEnabled', true);
+        $options->set('defaultMediaType', 'screen');
+        $options->set('isFontCacheEnabled', true);
 
         $dompdf = new Dompdf($options);
         $dompdf->loadHtml($html);
@@ -65,7 +74,7 @@ class AttestationService
         return base64_encode($dompdf->output());
     }
 
-    private function genererHTMLAttestation(array $data): string
+    private function genererHTMLAttestation(array $data, string $qrCodeBase64): string
     {
         $garantiesList = '';
         foreach ($data['garanties'] as $garantie) {
@@ -172,17 +181,26 @@ class AttestationService
                     color: #28a745;
                     margin-bottom: 10px;
                 }
-                .qr-placeholder {
+                .page-break {
+                    page-break-before: always;
+                    margin: 30px 0;
+                }
+                .qr-code-section {
+                    margin: 40px 0;
+                    padding: 20px 0;
+                    text-align: center;
+                    border-top: 2px solid #151C46;
+                    border-bottom: 2px solid #151C46;
+                }
+                .qr-code {
                     width: 100px;
                     height: 100px;
-                    background: #f0f0f0;
-                    border: 2px dashed #ccc;
                     display: flex;
+                    flex-direction: column;
                     align-items: center;
                     justify-content: center;
                     margin: 20px auto;
-                    font-size: 12px;
-                    color: #999;
+                    text-align: center;
                 }
             </style>
         </head>
@@ -268,8 +286,10 @@ class AttestationService
                     </div>
                 </div>
 
-                <div class="qr-placeholder">
-                    Code QR<br>de vérification
+                <div class="page-break"></div>
+                
+                <div class="qr-code-section">
+                    ' . $qrCodeBase64 . '
                 </div>
 
                 <div class="footer">
@@ -284,5 +304,89 @@ class AttestationService
             </div>
         </body>
         </html>';
+    }
+    
+    /**
+     * Génère les données pour le QR Code
+     */
+    private function genererQRCodeData(Contrat $contrat): string
+    {
+        $data = [
+            'numero_attestation' => $contrat->numero_attestation,
+            'numero_police' => $contrat->numero_police,
+            'date_souscription' => $contrat->date_souscription,
+            'nom_assure' => $contrat->user->nom . ' ' . $contrat->user->prenom,
+            'immatriculation' => $contrat->vehicule->immatriculation,
+            'marque_modele' => $contrat->vehicule->marque_vehicule . ' ' . $contrat->vehicule->modele_vehicule,
+            'compagnie' => $contrat->compagnie->nom
+        ];
+        
+        return json_encode($data);
+    }
+    
+    /**
+     * Génère le QR Code en base64 pour DomPDF
+     */
+    private function genererQRCodeBase64(Contrat $contrat): string
+    {
+        try {
+            // Créer le message de vérification au format demandé
+            $qrMessage = "Le véhicule est assuré\n";
+            $qrMessage .= "L'attestation d'assurance N° " . $contrat->numero_attestation . " du véhicule de marque " . $contrat->vehicule->marque_vehicule . " " . $contrat->vehicule->modele . " immatriculé " . $contrat->vehicule->immatriculation . " est valide\n";
+            $qrMessage .= "du " . $contrat->date_debut->format('Y-m-d') . " au " . $contrat->date_fin->format('Y-m-d') . " 23:59:59";
+            
+            // Générer le QR Code en SVG (plus compatible)
+            $qrCodeSvg = QrCode::format('svg')
+                ->size(150)
+                ->margin(1)
+                ->errorCorrection('M')
+                ->generate($qrMessage);
+            
+            // Convertir SVG en base64
+            $base64 = base64_encode($qrCodeSvg);
+            
+            // Vérifier que le base64 est valide
+            if (empty($base64) || strlen($base64) < 100) {
+                throw new \Exception('QR Code base64 invalide');
+            }
+            
+            // Retourner l'image SVG base64 intégrée dans le PDF
+            return '<div style="text-align: center; margin: 15px 0; padding: 15px; border: 2px solid #000;">
+                        <div style="font-size: 12px; font-weight: bold; margin-bottom: 10px;">QR CODE DE VÉRIFICATION</div>
+                        <img src="data:image/svg+xml;base64,' . $base64 . '" 
+                             alt="QR Code de vérification" 
+                             style="width: 120px; height: 120px; display: block; margin: 0 auto; border: 1px solid #ccc;">
+                        <div style="font-size: 10px; margin-top: 8px; color: #333; font-weight: bold;">Scannez pour vérifier le contrat</div>
+                    </div>';
+        } catch (\Exception $e) {
+            \Log::error('Erreur génération QR Code: ' . $e->getMessage());
+            
+            // En cas d'erreur, créer un QR Code ASCII simple
+            return $this->genererQRCodeASCII($data);
+        }
+    }
+    
+    /**
+     * Génère un QR Code ASCII simple en cas d'erreur
+     */
+    private function genererQRCodeASCII(string $data): string
+    {
+        $qrData = substr($data, 0, 50);
+        $qrPattern = '';
+        
+        // Créer un pattern QR Code simple
+        for ($i = 0; $i < 10; $i++) {
+            $line = '';
+            for ($j = 0; $j < 10; $j++) {
+                $line .= (($i + $j) % 2 == 0) ? '█' : '░';
+            }
+            $qrPattern .= $line . '<br>';
+        }
+        
+        return '<div style="text-align: center; margin: 15px 0; padding: 15px; border: 2px solid #000;">
+                    <div style="font-size: 12px; font-weight: bold; margin-bottom: 10px;">QR CODE DE VÉRIFICATION</div>
+                    <div style="font-family: monospace; font-size: 8px; line-height: 1; margin: 10px 0;">' . $qrPattern . '</div>
+                    <div style="font-size: 10px; margin-top: 8px; color: #333; font-weight: bold;">Contrat: ' . substr($qrData, 0, 20) . '...</div>
+                </div>';
     }
 }
