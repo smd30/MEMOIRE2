@@ -1,24 +1,46 @@
 <?php
 
-echo "🔍 Vérification des logs Laravel...\n\n";
+echo "📋 VÉRIFICATION DES LOGS\n";
+echo "========================\n\n";
 
 $logFile = 'storage/logs/laravel.log';
 
 if (file_exists($logFile)) {
-    $logs = file_get_contents($logFile);
-    $lines = explode("\n", $logs);
+    echo "📁 Fichier de log trouvé: $logFile\n";
     
-    // Afficher les 20 dernières lignes
-    $recentLines = array_slice($lines, -20);
+    $logContent = file_get_contents($logFile);
+    $lines = explode("\n", $logContent);
     
-    echo "📋 20 dernières lignes du log:\n";
-    foreach ($recentLines as $line) {
-        if (trim($line) !== '') {
+    echo "📊 Nombre total de lignes: " . count($lines) . "\n\n";
+    
+    // Afficher les dernières 20 lignes
+    $lastLines = array_slice($lines, -20);
+    
+    echo "📋 Dernières 20 lignes du log:\n";
+    echo "===============================\n";
+    
+    foreach ($lastLines as $line) {
+        if (trim($line)) {
             echo $line . "\n";
         }
     }
+    
+    // Chercher les erreurs d'email
+    $emailErrors = array_filter($lines, function($line) {
+        return strpos($line, 'email') !== false || strpos($line, 'Email') !== false;
+    });
+    
+    if (!empty($emailErrors)) {
+        echo "\n📧 Erreurs liées à l'email:\n";
+        echo "============================\n";
+        foreach (array_slice($emailErrors, -10) as $error) {
+            echo $error . "\n";
+        }
+    }
+    
 } else {
     echo "❌ Fichier de log non trouvé: $logFile\n";
 }
 
-echo "\n--- Vérification terminée ---\n";
+echo "\n==========================================\n";
+echo "🏁 Vérification terminée\n";

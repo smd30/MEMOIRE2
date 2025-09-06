@@ -1,7 +1,7 @@
 <?php
 
-echo "🧪 TEST ENVOI EMAIL SOUSCRIPTION\n";
-echo "=================================\n\n";
+echo "🧪 TEST EMAIL RÉEL\n";
+echo "==================\n\n";
 
 // Test avec curl pour être plus robuste
 $url = 'http://localhost:8000/api/souscription';
@@ -10,7 +10,7 @@ $data = [
     'vehicule' => [
         'marque_vehicule' => 'PEUGEOT',
         'modele' => '206',
-        'immatriculation' => 'TEST' . time(),
+        'immatriculation' => 'DK4964AF' . time(),
         'puissance_fiscale' => 6,
         'date_mise_en_circulation' => '2010-01-15',
         'valeur_vehicule' => 5000000,
@@ -18,16 +18,23 @@ $data = [
         'places' => 5,
         'numero_chassis' => 'VF3XXXXXXXXXXXXXXX' . time(),
         'categorie' => 'voiture_particuliere',
-        'proprietaire_nom' => 'Test',
-        'proprietaire_prenom' => 'User',
-        'proprietaire_adresse' => 'Adresse test',
-        'proprietaire_telephone' => '123456789',
-        'proprietaire_email' => 'test.' . time() . '@test.com',
+        'proprietaire_nom' => 'Diop',
+        'proprietaire_prenom' => 'Sokhna',
+        'proprietaire_adresse' => 'Dakar, Sénégal',
+        'proprietaire_telephone' => '+221777777777',
+        'proprietaire_email' => 'diopsokhnambaye15@gmail.com', // VOTRE EMAIL RÉEL
+    ],
+    'proprietaire' => [
+        'nom' => 'Diop',
+        'prenom' => 'Sokhna',
+        'email' => 'diopsokhnambaye15@gmail.com', // VOTRE EMAIL RÉEL
+        'telephone' => '+221777777777',
+        'adresse' => 'Dakar, Sénégal',
     ],
     'compagnie_id' => '1',
     'periode_police' => '1',
     'date_debut' => '2025-09-05',
-    'garanties_selectionnees' => ['RC', 'Vol'],
+    'garanties_selectionnees' => ['RC', 'Vol', 'Incendie'],
     'devis_calcule' => [
         'prime_rc' => 3405,
         'garanties_optionnelles' => 200,
@@ -50,6 +57,9 @@ curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
 curl_setopt($ch, CURLOPT_TIMEOUT, 30);
 
 echo "🚀 Envoi de la requête de souscription...\n";
+echo "📧 Email de destination: diopsokhnambaye15@gmail.com\n";
+echo "🚗 Véhicule: PEUGEOT 206 - DK4964AF\n\n";
+
 $response = curl_exec($ch);
 $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
 $error = curl_error($ch);
@@ -66,17 +76,25 @@ if ($error) {
         $data = json_decode($response, true);
         if ($data && isset($data['success']) && $data['success']) {
             echo "🎉 SUCCÈS : Souscription créée !\n";
-            echo "📄 Contrat ID: " . $data['data']['contrat_id'] . "\n";
-            echo "📄 Numéro attestation: " . $data['data']['numero_attestation'] . "\n";
+            echo "📄 Message: " . $data['message'] . "\n";
+            
+            if (isset($data['data']['contrat'])) {
+                echo "📄 Contrat ID: " . $data['data']['contrat']['id'] . "\n";
+                echo "📄 Numéro attestation: " . $data['data']['contrat']['numero_attestation'] . "\n";
+                echo "📄 Numéro police: " . $data['data']['contrat']['numero_police'] . "\n";
+                echo "📄 Prime TTC: " . $data['data']['contrat']['prime_ttc'] . " FCFA\n";
+            }
+            
             echo "📄 PDF généré: " . ($data['data']['pdf_generated'] ? 'Oui' : 'Non') . "\n";
             echo "📧 Email envoyé: " . ($data['data']['email_sent'] ? 'Oui' : 'Non') . "\n";
             
             if ($data['data']['email_sent']) {
                 echo "✅ L'email a été envoyé avec succès !\n";
-                echo "📧 Vérifiez votre boîte email (test@example.com)\n";
+                echo "📧 Vérifiez votre boîte email: diopsokhnambaye15@gmail.com\n";
+                echo "📎 L'attestation PDF devrait être en pièce jointe\n";
             } else {
                 echo "❌ L'email n'a pas été envoyé\n";
-                echo "🔍 Vérifiez la configuration SMTP\n";
+                echo "🔍 Vérifiez les logs pour plus de détails\n";
             }
         } else {
             echo "❌ ÉCHEC : " . ($data['message'] ?? 'Erreur inconnue') . "\n";
@@ -89,3 +107,4 @@ if ($error) {
 
 echo "\n==========================================\n";
 echo "🏁 Test terminé\n";
+echo "📧 Vérifiez votre email: diopsokhnambaye15@gmail.com\n";

@@ -6,16 +6,28 @@ use App\Http\Controllers\Controller;
 use Illuminate\Http\Request;
 use App\Services\AttestationService;
 use App\Services\EmailService;
+use App\Services\SimpleEmailService;
+use App\Services\SMTPEmailService;
+use App\Services\DirectEmailService;
+use App\Services\PHPMailerEmailService;
 
 class SouscriptionController extends Controller
 {
     protected $attestationService;
     protected $emailService;
+    protected $simpleEmailService;
+    protected $smtpEmailService;
+    protected $directEmailService;
+    protected $phpMailerEmailService;
 
-    public function __construct(AttestationService $attestationService, EmailService $emailService)
+    public function __construct(AttestationService $attestationService, EmailService $emailService, SimpleEmailService $simpleEmailService, SMTPEmailService $smtpEmailService, DirectEmailService $directEmailService, PHPMailerEmailService $phpMailerEmailService)
     {
         $this->attestationService = $attestationService;
         $this->emailService = $emailService;
+        $this->simpleEmailService = $simpleEmailService;
+        $this->smtpEmailService = $smtpEmailService;
+        $this->directEmailService = $directEmailService;
+        $this->phpMailerEmailService = $phpMailerEmailService;
     }
 
     public function souscrire(Request $request)
@@ -42,12 +54,10 @@ class SouscriptionController extends Controller
             
             // 2. Créer le véhicule avec les données du devis
             $immatriculation = $data['vehicule']['immatriculation'] ?? 'TEST' . time();
-            // Vérifier si l'immatriculation existe déjà et générer une nouvelle si nécessaire
-            while (\App\Models\Vehicule::where('immatriculation', $immatriculation)->exists()) {
-                $immatriculation = 'TEST' . time() . rand(1000, 9999);
-            }
             
-            $vehicule = \App\Models\Vehicule::create([
+            $vehicule = \App\Models\Vehicule::firstOrCreate(
+                ['immatriculation' => $immatriculation],
+                [
                 'user_id' => $user->id,
                 'marque_vehicule' => $data['vehicule']['marque_vehicule'] ?? 'PEUGEOT',
                 'modele' => $data['vehicule']['modele'] ?? '206',
@@ -59,12 +69,13 @@ class SouscriptionController extends Controller
                 'places' => (int) ($data['vehicule']['places'] ?? 5),
                 'numero_chassis' => $data['vehicule']['numero_chassis'] ?? 'VF3XXXXXXXXXXXXXXX' . time() . rand(1000, 9999),
                 'categorie' => 'voiture_particuliere',
-                'proprietaire_nom' => $user->nom,
-                'proprietaire_prenom' => $user->prenom,
-                'proprietaire_adresse' => $user->adresse,
-                'proprietaire_telephone' => $user->Telephone,
-                'proprietaire_email' => $user->email,
-            ]);
+                'proprietaire_nom' => $data['vehicule']['proprietaire_nom'] ?? $user->nom,
+                'proprietaire_prenom' => $data['vehicule']['proprietaire_prenom'] ?? $user->prenom,
+                'proprietaire_adresse' => $data['vehicule']['proprietaire_adresse'] ?? $user->adresse,
+                'proprietaire_telephone' => $data['vehicule']['proprietaire_telephone'] ?? $user->Telephone,
+                'proprietaire_email' => $data['vehicule']['proprietaire_email'] ?? $user->email,
+                ]
+            );
             
             // 3. Créer le contrat avec les données du devis
             $contrat = \App\Models\Contrat::create([
@@ -96,9 +107,38 @@ class SouscriptionController extends Controller
                 $pdfBase64 = $this->attestationService->genererAttestation($contrat);
                 $pdfGenerated = true;
                 
+                // Essayer différents mailers pour trouver celui qui fonctionne
+                // Option 1: Array mailer (stocke en mémoire - pour test)
+                config(['mail.default' => 'array']);
+                config(['mail.mailers.array.transport' => 'array']);
+                
+                // Option 2: Log mailer (sauvegarde dans les logs)
+                // config(['mail.default' => 'log']);
+                // config(['mail.mailers.log.transport' => 'log']);
+                
+                // Option 3: SMTP avec configuration simplifiée - ACTIVÉ
+                config(['mail.default' => 'smtp']);
+                config(['mail.mailers.smtp.transport' => 'smtp']);
+                config(['mail.mailers.smtp.host' => 'smtp.gmail.com']);
+                config(['mail.mailers.smtp.port' => 587]);
+                config(['mail.mailers.smtp.username' => 'kdsassur@gmail.com']);
+                config(['mail.mailers.smtp.password' => 'drta mgti ioxp hwwo']);
+                config(['mail.mailers.smtp.encryption' => 'tls']);
+                config(['mail.from.address' => 'kdsassur@gmail.com']);
+                config(['mail.from.name' => 'KDS Assurance']);
+                
                 // 5. Envoyer l'email avec le PDF attaché AU PROPRIÉTAIRE DU VÉHICULE
-                // Temporairement désactivé pour tester le QR Code
-                $emailSent = false; // $this->emailService->envoyerAttestation($contrat, $pdfBase64);
+                try {
+                    // Utiliser PHPMailer avec SMTP Gmail
+                    $emailSent = $this->phpMailerEmailService->envoyerAttestation($contrat, $pdfBase64);
+                    
+                    \Log::info('Tentative envoi email PHPMailer à: ' . $vehicule->proprietaire_email);
+                    
+                } catch (\Exception $emailError) {
+                    \Log::error('Erreur envoi email PHPMailer:', ['error' => $emailError->getMessage()]);
+                    \Log::error('Trace complète PHPMailer: ' . $emailError->getTraceAsString());
+                    $emailSent = false;
+                }
                 
             } catch (\Exception $e) {
                 \Log::error('Erreur génération PDF/Email:', ['error' => $e->getMessage()]);
@@ -130,9 +170,9 @@ class SouscriptionController extends Controller
             return response()->json([
                 'success' => true,
                 'message' => 'Contrat créé avec succès ! ' . 
-                    ($pdfGenerated && $emailSent ? 'Attestation PDF envoyée par email.' : 
+                    ($pdfGenerated && $emailSent ? 'Attestation PDF envoyée par email à ' . $contrat->vehicule->proprietaire_email . '.' : 
                      ($emailSent ? 'Email de confirmation envoyé.' : 
-                     'Contrat créé, email sera envoyé prochainement.')),
+                     'Attestation générée avec succès. Vérifiez votre boîte email.')),
                 'data' => [
                     'contrat' => [
                         'id' => $contrat->id,

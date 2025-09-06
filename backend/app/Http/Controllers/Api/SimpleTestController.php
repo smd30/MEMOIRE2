@@ -37,25 +37,27 @@ class SimpleTestController extends Controller
                 ]
             );
 
-            // Créer un véhicule simple
-            $vehicule = Vehicule::create([
-                'user_id' => $user->id,
-                'marque_vehicule' => 'PEUGEOT',
-                'modele' => '206',
-                'immatriculation' => 'TEST' . time(),
-                'puissance_fiscale' => 6,
-                'date_mise_en_circulation' => '2010-01-15',
-                'valeur_vehicule' => 5000000,
-                'energie' => 'essence',
-                'places' => 5,
-                'numero_chassis' => 'VF3XXXXXXXXXXXXXXX' . time(),
-                'categorie' => 'voiture_particuliere',
-                'proprietaire_nom' => $user->nom,
-                'proprietaire_prenom' => $user->prenom,
-                'proprietaire_adresse' => $user->adresse,
-                'proprietaire_telephone' => $user->Telephone,
-                'proprietaire_email' => $user->email,
-            ]);
+            // Créer un véhicule simple avec des données réalistes
+            $vehicule = Vehicule::firstOrCreate(
+                ['immatriculation' => 'DK4964AF'],
+                [
+                    'user_id' => $user->id,
+                    'marque_vehicule' => 'PEUGEOT',
+                    'modele' => '206',
+                    'puissance_fiscale' => 6,
+                    'date_mise_en_circulation' => '2010-01-15',
+                    'valeur_vehicule' => 5000000,
+                    'energie' => 'essence',
+                    'places' => 5,
+                    'numero_chassis' => 'VF3XXXXXXXXXXXXXXX',
+                    'categorie' => 'voiture_particuliere',
+                    'proprietaire_nom' => $user->nom,
+                    'proprietaire_prenom' => $user->prenom,
+                    'proprietaire_adresse' => $user->adresse,
+                    'proprietaire_telephone' => $user->Telephone,
+                    'proprietaire_email' => $user->email,
+                ]
+            );
 
             // Créer un contrat simple
             $contrat = Contrat::create([

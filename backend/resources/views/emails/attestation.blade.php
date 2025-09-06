@@ -145,9 +145,13 @@
         <div class="info-section">
             <div class="info-title">GARANTIES INCLUSES</div>
             <ul class="garanties-list">
-                @foreach($garanties as $garantie)
-                    <li>{{ $garantie }}</li>
-                @endforeach
+                @if(is_array($garanties))
+                    @foreach($garanties as $garantie)
+                        <li>{{ $garantie }}</li>
+                    @endforeach
+                @else
+                    <li>{{ $garanties }}</li>
+                @endif
             </ul>
         </div>
 

@@ -1,34 +1,39 @@
 <?php
 
-echo "🚀 Test de création simple...\n";
+require_once 'vendor/autoload.php';
 
-$url = 'http://localhost:8000/api/simple-email';
+use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\Config;
 
-$data = ['test' => 'data'];
+echo "🧪 TEST EMAIL SIMPLE\n";
+echo "===================\n\n";
 
-$context = stream_context_create([
-    'http' => [
-        'method' => 'POST',
-        'header' => [
-            'Content-Type: application/json',
-            'Accept: application/json'
-        ],
-        'content' => json_encode($data)
-    ]
-]);
+// Configuration email de base
+Config::set('mail.default', 'smtp');
+Config::set('mail.mailers.smtp.transport', 'smtp');
+Config::set('mail.mailers.smtp.host', 'smtp.gmail.com');
+Config::set('mail.mailers.smtp.port', 587);
+Config::set('mail.mailers.smtp.encryption', 'tls');
+Config::set('mail.mailers.smtp.username', 'your-email@gmail.com');
+Config::set('mail.mailers.smtp.password', 'your-app-password');
 
-echo "URL: $url\n";
+Config::set('mail.from.address', 'your-email@gmail.com');
+Config::set('mail.from.name', 'Test Insurance');
 
-$response = file_get_contents($url, false, $context);
-
-if ($response === false) {
-    echo "\n❌ Erreur lors de la requête HTTP\n";
-    $error = error_get_last();
-    print_r($error);
-} else {
-    echo "\n✅ Réponse reçue:\n";
-    $responseData = json_decode($response, true);
-    print_r($responseData);
+try {
+    echo "📧 Test d'envoi d'email...\n";
+    
+    Mail::raw('Test email from Laravel', function ($message) {
+        $message->to('test@example.com')
+                ->subject('Test Email');
+    });
+    
+    echo "✅ Email envoyé avec succès !\n";
+    
+} catch (Exception $e) {
+    echo "❌ Erreur: " . $e->getMessage() . "\n";
+    echo "🔍 Vérifiez votre configuration SMTP\n";
 }
 
-echo "\n--- Test terminé ---\n";
+echo "\n==========================================\n";
+echo "🏁 Test terminé\n";

@@ -98,54 +98,57 @@ class AttestationService
                     background: white;
                     max-width: 800px;
                     margin: 0 auto;
-                    padding: 30px;
+                    padding: 20px;
                     border-radius: 10px;
                     box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+                    font-size: 12px;
                 }
                 .header {
                     text-align: center;
                     border-bottom: 3px solid #151C46;
-                    padding-bottom: 20px;
-                    margin-bottom: 30px;
+                    padding-bottom: 15px;
+                    margin-bottom: 20px;
                 }
                 .title {
-                    font-size: 24px;
+                    font-size: 20px;
                     font-weight: bold;
                     color: #151C46;
-                    margin: 0 0 10px 0;
+                    margin: 0 0 8px 0;
                 }
                 .subtitle {
-                    font-size: 18px;
+                    font-size: 16px;
                     color: #666;
                     margin: 0;
                 }
                 .info-section {
-                    margin-bottom: 25px;
+                    margin-bottom: 15px;
                 }
                 .info-title {
-                    font-size: 16px;
+                    font-size: 14px;
                     font-weight: bold;
                     color: #151C46;
-                    margin-bottom: 10px;
+                    margin-bottom: 8px;
                     border-bottom: 1px solid #ddd;
-                    padding-bottom: 5px;
+                    padding-bottom: 3px;
                 }
                 .info-grid {
                     display: grid;
                     grid-template-columns: 1fr 1fr;
-                    gap: 15px;
+                    gap: 10px;
                 }
                 .info-item {
-                    margin-bottom: 10px;
+                    margin-bottom: 6px;
                 }
                 .info-label {
                     font-weight: bold;
                     color: #333;
-                    margin-bottom: 5px;
+                    margin-bottom: 3px;
+                    font-size: 11px;
                 }
                 .info-value {
                     color: #666;
-                    padding: 5px 0;
+                    padding: 2px 0;
+                    font-size: 11px;
                 }
                 .garanties-list {
                     list-style: none;
@@ -153,41 +156,30 @@ class AttestationService
                 }
                 .garanties-list li {
                     background: #f8f9fa;
-                    padding: 8px 12px;
-                    margin-bottom: 5px;
+                    padding: 6px 10px;
+                    margin-bottom: 3px;
                     border-left: 4px solid #151C46;
                     border-radius: 3px;
+                    font-size: 11px;
                 }
                 .footer {
-                    margin-top: 40px;
+                    margin-top: 20px;
                     text-align: center;
                     border-top: 2px solid #ddd;
-                    padding-top: 20px;
+                    padding-top: 15px;
                 }
                 .compagnie-info {
-                    font-size: 14px;
+                    font-size: 11px;
                     color: #666;
-                    line-height: 1.5;
-                }
-                .security-info {
-                    background: #f8f9fa;
-                    padding: 15px;
-                    border-radius: 5px;
-                    margin: 20px 0;
-                    border-left: 4px solid #28a745;
-                }
-                .security-title {
-                    font-weight: bold;
-                    color: #28a745;
-                    margin-bottom: 10px;
+                    line-height: 1.4;
                 }
                 .page-break {
                     page-break-before: always;
                     margin: 30px 0;
                 }
                 .qr-code-section {
-                    margin: 40px 0;
-                    padding: 20px 0;
+                    margin: 20px 0;
+                    padding: 15px 0;
                     text-align: center;
                     border-top: 2px solid #151C46;
                     border-bottom: 2px solid #151C46;
@@ -272,22 +264,6 @@ class AttestationService
                     </ul>
                 </div>
 
-                <div class="security-info">
-                    <div class="security-title">INFORMATIONS DE SÉCURITÉ</div>
-                    <div class="info-grid">
-                        <div class="info-item">
-                            <div class="info-label">Clé de sécurité:</div>
-                            <div class="info-value">' . htmlspecialchars($data['cle_securite']) . '</div>
-                        </div>
-                        <div class="info-item">
-                            <div class="info-label">Prime TTC:</div>
-                            <div class="info-value">' . htmlspecialchars($data['prime_ttc']) . ' FCFA</div>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="page-break"></div>
-                
                 <div class="qr-code-section">
                     ' . $qrCodeBase64 . '
                 </div>

@@ -27,21 +27,27 @@ class EmailService
                 'date_debut' => $contrat->date_debut->format('d/m/Y'),
                 'date_fin' => $contrat->date_fin->format('d/m/Y'),
                 'prime_ttc' => number_format($contrat->prime_ttc, 0, ',', ' '),
-                'garanties' => json_decode($contrat->garanties_selectionnees, true) ?: ['RC', 'Vol'],
+                'garanties' => implode(', ', json_decode($contrat->garanties_selectionnees, true) ?: ['RC', 'Vol']),
             ];
 
             // Sauvegarder le PDF temporairement
             $pdfPath = $this->sauvegarderPDFTemporaire($pdfBase64, $contrat->numero_attestation);
 
-            // Envoyer l'email
-            Mail::send('emails.attestation', $emailData, function ($message) use ($user, $contrat, $pdfPath) {
-                $message->to($user->email, $user->prenom . ' ' . $user->nom)
+            // Envoyer l'email AU PROPRIÉTAIRE DU VÉHICULE
+            \Log::info('Tentative d\'envoi email à: ' . $vehicule->proprietaire_email);
+            \Log::info('Fichier PDF: ' . $pdfPath);
+            \Log::info('Fichier existe: ' . (file_exists($pdfPath) ? 'Oui' : 'Non'));
+            
+            Mail::send('emails.test-minimal-email', [], function ($message) use ($vehicule, $contrat, $pdfPath) {
+                $message->to($vehicule->proprietaire_email, $vehicule->proprietaire_prenom . ' ' . $vehicule->proprietaire_nom)
                         ->subject('Attestation d\'assurance - N° ' . $contrat->numero_attestation)
                         ->attach($pdfPath, [
                             'as' => 'Attestation_' . $contrat->numero_attestation . '.pdf',
                             'mime' => 'application/pdf',
                         ]);
             });
+            
+            \Log::info('Email envoyé avec succès');
 
             // Supprimer le fichier temporaire
             if (file_exists($pdfPath)) {
@@ -52,6 +58,7 @@ class EmailService
 
         } catch (\Exception $e) {
             \Log::error('Erreur lors de l\'envoi de l\'attestation par email: ' . $e->getMessage());
+            \Log::error('Trace complète: ' . $e->getTraceAsString());
             return false;
         }
     }
