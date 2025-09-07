@@ -58,3 +58,4 @@ echo "✅ Application prête! Démarrage des services..."
 
 # Démarrer Supervisor
 exec /usr/bin/supervisord -c /etc/supervisor/conf.d/supervisord.conf
+

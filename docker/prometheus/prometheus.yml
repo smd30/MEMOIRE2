@@ -102,3 +102,4 @@ scrape_configs:
       - source_labels: [__meta_kubernetes_endpoints_name]
         regex: 'node-exporter'
         action: keep
+

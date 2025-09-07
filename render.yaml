@@ -1,7 +1,7 @@
 services:
   # Backend Laravel
   - type: web
-    name: kds-assurance-backend
+    name: memoire2-backend
     env: docker
     dockerfilePath: ./backend/Dockerfile
     dockerContext: ./backend
@@ -22,31 +22,31 @@ services:
       - key: APP_DEBUG
         value: false
       - key: APP_NAME
-        value: KDS Assurance
+        value: MEMOIRE2
       - key: DB_CONNECTION
         fromDatabase:
-          name: kds-assurance-db
+          name: memoire2-db
           property: connectionString
       - key: DB_HOST
         fromDatabase:
-          name: kds-assurance-db
+          name: memoire2-db
           property: host
       - key: DB_DATABASE
         fromDatabase:
-          name: kds-assurance-db
+          name: memoire2-db
           property: database
       - key: DB_USERNAME
         fromDatabase:
-          name: kds-assurance-db
+          name: memoire2-db
           property: user
       - key: DB_PASSWORD
         fromDatabase:
-          name: kds-assurance-db
+          name: memoire2-db
           property: password
       - key: REDIS_URL
         fromService:
           type: redis
-          name: kds-assurance-redis
+          name: memoire2-redis
           property: connectionString
       - key: MAIL_MAILER
         value: smtp
@@ -63,7 +63,7 @@ services:
       - key: MAIL_FROM_ADDRESS
         value: kdsassur@gmail.com
       - key: MAIL_FROM_NAME
-        value: KDS Assurance
+        value: MEMOIRE2
       - key: CACHE_DRIVER
         value: redis
       - key: SESSION_DRIVER
@@ -73,7 +73,7 @@ services:
 
   # Frontend Angular
   - type: web
-    name: kds-assurance-frontend
+    name: memoire2-frontend
     env: docker
     dockerfilePath: ./frontend/Dockerfile
     dockerContext: ./frontend
@@ -88,18 +88,19 @@ services:
       - key: API_URL
         fromService:
           type: web
-          name: kds-assurance-backend
+          name: memoire2-backend
           envVarKey: RENDER_EXTERNAL_URL
 
 databases:
   # MySQL Database
-  - name: kds-assurance-db
+  - name: memoire2-db
     plan: starter
     region: oregon
-    databaseName: kds_assurance
-    user: kds_user
+    databaseName: memoire2
+    user: memoire2_user
 
   # Redis Cache
-  - name: kds-assurance-redis
+  - name: memoire2-redis
     plan: starter
     region: oregon
+

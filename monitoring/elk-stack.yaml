@@ -235,3 +235,4 @@ spec:
   - port: 9600
     targetPort: 9600
     name: api
+
