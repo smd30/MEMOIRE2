@@ -1,10 +1,6 @@
-name: 🚀 KDS Assurance CI/CD Pipeline
+name: 🚀 KDS Assurance CI/CD Pipeline (DISABLED)
 
 on:
-  push:
-    branches: [ main, develop ]
-  pull_request:
-    branches: [ main ]
   workflow_dispatch:
 
 env:
