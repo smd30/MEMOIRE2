@@ -1,0 +1,328 @@
+name: 🚀 KDS Assurance CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main, develop ]
+  pull_request:
+    branches: [ main ]
+  workflow_dispatch:
+
+env:
+  REGISTRY: ghcr.io
+  IMAGE_NAME: ${{ github.repository }}
+  PHP_VERSION: '8.2'
+  NODE_VERSION: '18'
+
+jobs:
+  # 🔍 Job 1: Tests et Analyse de Code
+  test-and-scan:
+    name: 🧪 Tests & Code Analysis
+    runs-on: ubuntu-latest
+    
+    services:
+      mysql:
+        image: mysql:8.0
+        env:
+          MYSQL_ROOT_PASSWORD: root
+          MYSQL_DATABASE: testing
+          MYSQL_USER: testuser
+          MYSQL_PASSWORD: testpass
+        ports:
+          - 3306:3306
+        options: --health-cmd="mysqladmin ping" --health-interval=10s --health-timeout=5s --health-retries=3
+
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: --health-cmd="redis-cli ping" --health-interval=10s --health-timeout=5s --health-retries=3
+
+    steps:
+    - name: 📥 Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: 🐘 Setup PHP
+      uses: shivammathur/setup-php@v2
+      with:
+        php-version: ${{ env.PHP_VERSION }}
+        extensions: mbstring, dom, fileinfo, mysql, gd, zip, curl, xml, bcmath, soap, intl, readline, libxml, openssl, pdo, pdo_mysql, tokenizer, xml, ctype, json, iconv, zip, fileinfo, exif, pcntl, bcmath, gd, imagick
+        coverage: xdebug
+        tools: composer:v2
+
+    - name: 📦 Cache Composer dependencies
+      uses: actions/cache@v3
+      with:
+        path: ~/.composer/cache
+        key: ${{ runner.os }}-composer-${{ hashFiles('**/composer.lock') }}
+        restore-keys: |
+          ${{ runner.os }}-composer-
+
+    - name: 📦 Install Composer dependencies
+      run: |
+        cd backend
+        composer install --prefer-dist --no-progress --no-suggest
+
+    - name: 📝 Copy .env
+      run: |
+        cd backend
+        php -r "file_exists('.env') || copy('.env.example', '.env');"
+
+    - name: 🔑 Generate application key
+      run: |
+        cd backend
+        php artisan key:generate
+
+    - name: 📁 Set directory permissions
+      run: |
+        cd backend
+        chmod -R 777 storage bootstrap/cache
+
+    - name: 🗄️ Create Database
+      run: |
+        mysql --host 127.0.0.1 --port 3306 -uroot -proot -e "CREATE DATABASE IF NOT EXISTS testing;"
+
+    - name: 🧪 Execute tests (Unit and Feature tests)
+      env:
+        DB_CONNECTION: mysql
+        DB_HOST: 127.0.0.1
+        DB_PORT: 3306
+        DB_DATABASE: testing
+        DB_USERNAME: root
+        DB_PASSWORD: root
+        REDIS_HOST: 127.0.0.1
+        REDIS_PORT: 6379
+      run: |
+        cd backend
+        php artisan test --coverage --coverage-clover=coverage.xml
+
+    - name: 📊 Upload coverage to Codecov
+      uses: codecov/codecov-action@v3
+      with:
+        file: ./backend/coverage.xml
+        flags: backend
+        name: backend-coverage
+
+    - name: 🔍 SonarCloud Scan
+      uses: SonarSource/sonarcloud-github-action@master
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+
+    - name: 🛡️ Security Scan with PHPStan
+      run: |
+        cd backend
+        composer require --dev phpstan/phpstan
+        ./vendor/bin/phpstan analyse --level=5
+
+  # 🏗️ Job 2: Build Frontend
+  build-frontend:
+    name: 🎨 Build Frontend
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: 📥 Checkout code
+      uses: actions/checkout@v4
+
+    - name: 📦 Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: ${{ env.NODE_VERSION }}
+        cache: 'npm'
+        cache-dependency-path: frontend/package-lock.json
+
+    - name: 📦 Install dependencies
+      run: |
+        cd frontend
+        npm ci
+
+    - name: 🧪 Run frontend tests
+      run: |
+        cd frontend
+        npm run test -- --watch=false --browsers=ChromeHeadless
+
+    - name: 🏗️ Build frontend
+      run: |
+        cd frontend
+        npm run build
+
+    - name: 📦 Upload build artifacts
+      uses: actions/upload-artifact@v3
+      with:
+        name: frontend-build
+        path: frontend/dist/
+
+  # 🐳 Job 3: Build et Push Docker Images
+  build-and-push:
+    name: 🐳 Build & Push Docker Images
+    needs: [test-and-scan, build-frontend]
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch'
+
+    steps:
+    - name: 📥 Checkout code
+      uses: actions/checkout@v4
+
+    - name: 📥 Download frontend build
+      uses: actions/download-artifact@v3
+      with:
+        name: frontend-build
+        path: frontend/dist/
+
+    - name: 🐳 Set up Docker Buildx
+      uses: docker/setup-buildx-action@v3
+
+    - name: 🔐 Log in to Container Registry
+      uses: docker/login-action@v3
+      with:
+        registry: ${{ env.REGISTRY }}
+        username: ${{ github.actor }}
+        password: ${{ secrets.GITHUB_TOKEN }}
+
+    - name: 📋 Extract metadata
+      id: meta
+      uses: docker/metadata-action@v5
+      with:
+        images: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}
+        tags: |
+          type=ref,event=branch
+          type=ref,event=pr
+          type=sha,prefix={{branch}}-
+          type=raw,value=latest,enable={{is_default_branch}}
+          type=raw,value=develop,enable={{is_default_branch}}
+
+    - name: 🏗️ Build and push Backend Docker image
+      uses: docker/build-push-action@v5
+      with:
+        context: ./backend
+        push: true
+        tags: ${{ steps.meta.outputs.tags }}
+        labels: ${{ steps.meta.outputs.labels }}
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+        platforms: linux/amd64,linux/arm64
+
+    - name: 🏗️ Build and push Frontend Docker image
+      uses: docker/build-push-action@v5
+      with:
+        context: ./frontend
+        push: true
+        tags: ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-frontend:${{ steps.meta.outputs.version }}
+        labels: ${{ steps.meta.outputs.labels }}
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
+        platforms: linux/amd64,linux/arm64
+
+  # ☸️ Job 4: Déploiement sur Kubernetes
+  deploy-kubernetes:
+    name: ☸️ Deploy to Kubernetes
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch'
+    environment: production
+
+    steps:
+    - name: 📥 Checkout code
+      uses: actions/checkout@v4
+
+    - name: ☸️ Setup kubectl
+      uses: azure/setup-kubectl@v3
+      with:
+        version: 'v1.28.0'
+
+    - name: ☸️ Configure kubectl
+      run: |
+        echo "${{ secrets.KUBE_CONFIG }}" | base64 -d > kubeconfig
+        export KUBECONFIG=kubeconfig
+
+    - name: ☸️ Deploy to Kubernetes
+      run: |
+        export KUBECONFIG=kubeconfig
+        kubectl apply -f kubernetes/
+        kubectl set image deployment/laravel-app laravel-app=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest -n kds-assurance
+        kubectl set image deployment/angular-app angular-app=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}-frontend:latest -n kds-assurance
+        kubectl rollout status deployment/laravel-app -n kds-assurance --timeout=300s
+        kubectl rollout status deployment/angular-app -n kds-assurance --timeout=300s
+
+    - name: 🏥 Health Check
+      run: |
+        export KUBECONFIG=kubeconfig
+        kubectl get pods -l app=laravel-app -n kds-assurance
+        kubectl get pods -l app=angular-app -n kds-assurance
+        kubectl get services -n kds-assurance
+
+  # 📊 Job 5: Monitoring et Alertes
+  monitoring:
+    name: 📊 Setup Monitoring
+    needs: deploy-kubernetes
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch'
+
+    steps:
+    - name: 📥 Checkout code
+      uses: actions/checkout@v4
+
+    - name: ☸️ Setup kubectl
+      uses: azure/setup-kubectl@v3
+
+    - name: ☸️ Configure kubectl
+      run: |
+        echo "${{ secrets.KUBE_CONFIG }}" | base64 -d > kubeconfig
+        export KUBECONFIG=kubeconfig
+
+    - name: 📊 Deploy ELK Stack
+      run: |
+        export KUBECONFIG=kubeconfig
+        kubectl apply -f monitoring/elk-stack.yaml -n monitoring
+
+    - name: 📊 Deploy Prometheus & Grafana
+      run: |
+        export KUBECONFIG=kubeconfig
+        kubectl apply -f monitoring/prometheus-grafana.yaml -n monitoring
+
+    - name: 🚨 Setup Alerting
+      run: |
+        export KUBECONFIG=kubeconfig
+        kubectl apply -f monitoring/alerts.yaml -n monitoring
+
+  # 🚀 Job 6: Déploiement sur Render
+  deploy-render:
+    name: 🚀 Deploy to Render
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' || github.event_name == 'workflow_dispatch'
+
+    steps:
+    - name: 📥 Checkout code
+      uses: actions/checkout@v4
+
+    - name: 🚀 Deploy to Render
+      uses: johnbeynon/render-deploy-action@v0.0.8
+      with:
+        service-id: ${{ secrets.RENDER_SERVICE_ID }}
+        api-key: ${{ secrets.RENDER_API_KEY }}
+
+  # 📧 Job 7: Notifications
+  notify:
+    name: 📧 Send Notifications
+    needs: [deploy-kubernetes, deploy-render]
+    runs-on: ubuntu-latest
+    if: always()
+
+    steps:
+    - name: 📧 Notify Success
+      if: needs.deploy-kubernetes.result == 'success' && needs.deploy-render.result == 'success'
+      uses: 8398a7/action-slack@v3
+      with:
+        status: success
+        text: '🚀 KDS Assurance deployed successfully!'
+        webhook_url: ${{ secrets.SLACK_WEBHOOK }}
+
+    - name: 📧 Notify Failure
+      if: needs.deploy-kubernetes.result == 'failure' || needs.deploy-render.result == 'failure'
+      uses: 8398a7/action-slack@v3
+      with:
+        status: failure
+        text: '❌ KDS Assurance deployment failed!'
+        webhook_url: ${{ secrets.SLACK_WEBHOOK }}

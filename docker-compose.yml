@@ -1,160 +1,143 @@
 version: '3.8'
 
 services:
-  # Base de données PostgreSQL
-  db:
-    image: postgres:15-alpine
-    container_name: assurance_auto_db
+  # Base de données MySQL
+  mysql:
+    image: mysql:8.0
+    container_name: kds-mysql
+    restart: unless-stopped
     environment:
-      POSTGRES_DB: assurance_auto
-      POSTGRES_USER: postgres
-      POSTGRES_PASSWORD: postgres
-    ports:
-      - "5432:5432"
+      MYSQL_ROOT_PASSWORD: ${DB_ROOT_PASSWORD:-kds_root_password}
+      MYSQL_DATABASE: ${DB_DATABASE:-kds_assurance}
+      MYSQL_USER: ${DB_USERNAME:-kds_user}
+      MYSQL_PASSWORD: ${DB_PASSWORD:-kds_password}
     volumes:
-      - postgres_data:/var/lib/postgresql/data
-      - ./data:/data
+      - mysql_data:/var/lib/mysql
+      - ./docker/mysql/init:/docker-entrypoint-initdb.d
+    ports:
+      - "3306:3306"
     networks:
-      - assurance_network
+      - kds-network
+    command: --default-authentication-plugin=mysql_native_password
 
-  # Redis pour cache et sessions
+  # Cache Redis
   redis:
     image: redis:7-alpine
-    container_name: assurance_auto_redis
+    container_name: kds-redis
+    restart: unless-stopped
+    volumes:
+      - redis_data:/data
     ports:
       - "6379:6379"
     networks:
-      - assurance_network
+      - kds-network
+    command: redis-server --appendonly yes
 
-  # Backend Laravel
-  backend:
+  # Application Laravel
+  app:
     build:
       context: ./backend
       dockerfile: Dockerfile
-    container_name: assurance_auto_backend
-    environment:
-      DB_HOST: db
-      DB_PORT: 5432
-      DB_DATABASE: assurance_auto
-      DB_USERNAME: postgres
-      DB_PASSWORD: postgres
-      REDIS_HOST: redis
-      REDIS_PORT: 6379
-      COMPANY_API_URL: http://company-api:3000
-      STRIPE_KEY: pk_test_51H1234567890
-      STRIPE_SECRET: sk_test_51H1234567890
-      STRIPE_WEBHOOK_SECRET: whsec_test_1234567890
-      JWT_SECRET: your-super-secret-jwt-key-here
-      APP_KEY: base64:your-super-secret-app-key-here
-      MAIL_MAILER: smtp
-      MAIL_HOST: mailhog
-      MAIL_PORT: 1025
-      MAIL_USERNAME: null
-      MAIL_PASSWORD: null
-      MAIL_ENCRYPTION: null
-      MAIL_FROM_ADDRESS: noreply@assurance-auto.com
-      MAIL_FROM_NAME: "Assurance Auto"
-    ports:
-      - "8000:8000"
+    container_name: kds-app
+    restart: unless-stopped
+    working_dir: /var/www/html
     volumes:
       - ./backend:/var/www/html
-      - ./data:/data
+      - ./storage:/var/www/html/storage/app/public
+    environment:
+      - APP_ENV=${APP_ENV:-production}
+      - APP_DEBUG=${APP_DEBUG:-false}
+      - DB_CONNECTION=mysql
+      - DB_HOST=mysql
+      - DB_PORT=3306
+      - DB_DATABASE=${DB_DATABASE:-kds_assurance}
+      - DB_USERNAME=${DB_USERNAME:-kds_user}
+      - DB_PASSWORD=${DB_PASSWORD:-kds_password}
+      - REDIS_HOST=redis
+      - REDIS_PORT=6379
+      - MAIL_MAILER=${MAIL_MAILER:-smtp}
+      - MAIL_HOST=${MAIL_HOST:-smtp.gmail.com}
+      - MAIL_PORT=${MAIL_PORT:-587}
+      - MAIL_USERNAME=${MAIL_USERNAME:-kdsassur@gmail.com}
+      - MAIL_PASSWORD=${MAIL_PASSWORD:-drta mgti ioxp hwwo}
+      - MAIL_ENCRYPTION=${MAIL_ENCRYPTION:-tls}
+      - MAIL_FROM_ADDRESS=${MAIL_FROM_ADDRESS:-kdsassur@gmail.com}
+      - MAIL_FROM_NAME=${MAIL_FROM_NAME:-KDS Assurance}
     depends_on:
-      - db
+      - mysql
       - redis
     networks:
-      - assurance_network
-    command: >
-      sh -c "
-        composer install --no-interaction &&
-        php artisan key:generate &&
-        php artisan migrate --force &&
-        php artisan serve --host=0.0.0.0 --port=8000
-      "
+      - kds-network
 
-  # Company API (service séparé)
-  company-api:
-    build:
-      context: ./company-api
-      dockerfile: Dockerfile
-    container_name: assurance_auto_company_api
-    environment:
-      NODE_ENV: development
-      PORT: 3000
-      JWT_SECRET: company-api-secret-key
-      QR_SECRET: qr-code-signature-secret
-      DATABASE_URL: postgresql://postgres:postgres@db:5432/assurance_auto
-    ports:
-      - "3000:3000"
-    volumes:
-      - ./company-api:/app
-      - ./data:/data
-    depends_on:
-      - db
-    networks:
-      - assurance_network
-    command: >
-      sh -c "
-        npm install &&
-        npm run dev
-      "
-
-  # Frontend Angular
-  frontend:
-    build:
-      context: ./frontend
-      dockerfile: Dockerfile
-    container_name: assurance_auto_frontend
-    environment:
-      NODE_ENV: development
-      API_URL: http://localhost:8000
-      COMPANY_API_URL: http://localhost:3000
-    ports:
-      - "4200:4200"
-    volumes:
-      - ./frontend:/app
-      - /app/node_modules
-    depends_on:
-      - backend
-      - company-api
-    networks:
-      - assurance_network
-    command: >
-      sh -c "
-        npm install &&
-        npm start
-      "
-
-  # Serveur mail de développement
-  mailhog:
-    image: mailhog/mailhog:latest
-    container_name: assurance_auto_mailhog
-    ports:
-      - "1025:1025"  # SMTP
-      - "8025:8025"  # Interface web
-    networks:
-      - assurance_network
-
-  # Nginx pour le backend (optionnel, pour la production)
+  # Nginx Reverse Proxy
   nginx:
     image: nginx:alpine
-    container_name: assurance_auto_nginx
+    container_name: kds-nginx
+    restart: unless-stopped
     ports:
       - "80:80"
+      - "443:443"
     volumes:
-      - ./nginx/nginx.conf:/etc/nginx/nginx.conf
-      - ./backend/public:/var/www/html/public
+      - ./docker/nginx/nginx.conf:/etc/nginx/nginx.conf
+      - ./docker/nginx/sites:/etc/nginx/sites-available
+      - ./docker/nginx/ssl:/etc/nginx/ssl
+      - ./storage:/var/www/storage
     depends_on:
-      - backend
+      - app
     networks:
-      - assurance_network
-    profiles:
-      - production
+      - kds-network
+
+  # Frontend Angular (si nécessaire)
+  frontend:
+    image: nginx:alpine
+    container_name: kds-frontend
+    restart: unless-stopped
+    ports:
+      - "4200:80"
+    volumes:
+      - ./frontend/dist:/usr/share/nginx/html
+      - ./docker/nginx/frontend.conf:/etc/nginx/conf.d/default.conf
+    networks:
+      - kds-network
+
+  # Monitoring avec Prometheus
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: kds-prometheus
+    restart: unless-stopped
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./docker/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus_data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+    networks:
+      - kds-network
+
+  # Grafana pour les dashboards
+  grafana:
+    image: grafana/grafana:latest
+    container_name: kds-grafana
+    restart: unless-stopped
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=${GRAFANA_PASSWORD:-admin}
+    volumes:
+      - grafana_data:/var/lib/grafana
+    networks:
+      - kds-network
 
 volumes:
-  postgres_data:
+  mysql_data:
+  redis_data:
+  prometheus_data:
+  grafana_data:
 
 networks:
-  assurance_network:
+  kds-network:
     driver: bridge
-

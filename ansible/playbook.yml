@@ -1,0 +1,223 @@
+---
+- name: 🚀 Deploy KDS Assurance Application
+  hosts: production
+  become: yes
+  vars:
+    app_name: kds-assurance
+    app_user: www-data
+    app_dir: /var/www/kds-assurance
+    git_repo: https://github.com/votre-username/kds-assurance.git
+    git_branch: main
+    domain: kds-assurance.com
+
+  tasks:
+    - name: 📦 Update system packages
+      apt:
+        update_cache: yes
+        upgrade: yes
+        autoremove: yes
+
+    - name: 📦 Install required packages
+      apt:
+        name:
+          - nginx
+          - mysql-server
+          - redis-server
+          - php8.2-fpm
+          - php8.2-mysql
+          - php8.2-xml
+          - php8.2-gd
+          - php8.2-curl
+          - php8.2-zip
+          - php8.2-mbstring
+          - php8.2-bcmath
+          - php8.2-redis
+          - php8.2-imagick
+          - composer
+          - git
+          - curl
+          - unzip
+          - supervisor
+          - certbot
+          - python3-certbot-nginx
+        state: present
+
+    - name: 👤 Create application user
+      user:
+        name: "{{ app_user }}"
+        system: yes
+        shell: /bin/bash
+        home: "{{ app_dir }}"
+        create_home: yes
+
+    - name: 📁 Create application directory
+      file:
+        path: "{{ app_dir }}"
+        state: directory
+        owner: "{{ app_user }}"
+        group: "{{ app_user }}"
+        mode: '0755'
+
+    - name: 📥 Clone application repository
+      git:
+        repo: "{{ git_repo }}"
+        dest: "{{ app_dir }}"
+        version: "{{ git_branch }}"
+        update: yes
+      become_user: "{{ app_user }}"
+
+    - name: 📦 Install Composer dependencies
+      composer:
+        command: install
+        working_dir: "{{ app_dir }}/backend"
+        optimize_autoloader: yes
+        no_dev: yes
+        no_scripts: yes
+
+    - name: 📝 Set up environment file
+      template:
+        src: .env.j2
+        dest: "{{ app_dir }}/backend/.env"
+        owner: "{{ app_user }}"
+        group: "{{ app_user }}"
+        mode: '0644'
+
+    - name: 🔑 Generate application key
+      command: php artisan key:generate
+      args:
+        chdir: "{{ app_dir }}/backend"
+      become_user: "{{ app_user }}"
+
+    - name: 🗄️ Configure MySQL database
+      mysql_db:
+        name: kds_assurance
+        state: present
+        login_user: root
+        login_password: "{{ mysql_root_password }}"
+
+    - name: 👤 Create MySQL user
+      mysql_user:
+        name: kds_user
+        password: "{{ mysql_password }}"
+        priv: "kds_assurance.*:ALL"
+        state: present
+        login_user: root
+        login_password: "{{ mysql_root_password }}"
+
+    - name: 🗄️ Run database migrations
+      command: php artisan migrate --force
+      args:
+        chdir: "{{ app_dir }}/backend"
+      become_user: "{{ app_user }}"
+
+    - name: 📊 Seed database
+      command: php artisan db:seed --force
+      args:
+        chdir: "{{ app_dir }}/backend"
+      become_user: "{{ app_user }}"
+
+    - name: 💾 Cache configuration
+      command: php artisan config:cache
+      args:
+        chdir: "{{ app_dir }}/backend"
+      become_user: "{{ app_user }}"
+
+    - name: 🛣️ Cache routes
+      command: php artisan route:cache
+      args:
+        chdir: "{{ app_dir }}/backend"
+      become_user: "{{ app_user }}"
+
+    - name: 👁️ Cache views
+      command: php artisan view:cache
+      args:
+        chdir: "{{ app_dir }}/backend"
+      become_user: "{{ app_user }}"
+
+    - name: 📁 Set proper permissions
+      file:
+        path: "{{ app_dir }}/backend/storage"
+        state: directory
+        owner: "{{ app_user }}"
+        group: "{{ app_user }}"
+        mode: '0755'
+        recurse: yes
+
+    - name: 📁 Set proper permissions for bootstrap cache
+      file:
+        path: "{{ app_dir }}/backend/bootstrap/cache"
+        state: directory
+        owner: "{{ app_user }}"
+        group: "{{ app_user }}"
+        mode: '0755'
+        recurse: yes
+
+    - name: 🌐 Configure Nginx
+      template:
+        src: nginx.conf.j2
+        dest: /etc/nginx/sites-available/{{ app_name }}
+        owner: root
+        group: root
+        mode: '0644'
+
+    - name: 🔗 Enable Nginx site
+      file:
+        src: /etc/nginx/sites-available/{{ app_name }}
+        dest: /etc/nginx/sites-enabled/{{ app_name }}
+        state: link
+
+    - name: 🗑️ Remove default Nginx site
+      file:
+        path: /etc/nginx/sites-enabled/default
+        state: absent
+
+    - name: 🔧 Configure PHP-FPM
+      template:
+        src: php-fpm.conf.j2
+        dest: /etc/php/8.2/fpm/pool.d/{{ app_name }}.conf
+        owner: root
+        group: root
+        mode: '0644'
+
+    - name: 🔄 Configure Supervisor for queues
+      template:
+        src: supervisor.conf.j2
+        dest: /etc/supervisor/conf.d/{{ app_name }}.conf
+        owner: root
+        group: root
+        mode: '0644'
+
+    - name: 🔄 Restart services
+      systemd:
+        name: "{{ item }}"
+        state: restarted
+        enabled: yes
+      loop:
+        - nginx
+        - php8.2-fpm
+        - mysql
+        - redis-server
+        - supervisor
+
+    - name: 🔒 Setup SSL certificate
+      command: certbot --nginx -d {{ domain }} -d www.{{ domain }} --non-interactive --agree-tos --email admin@{{ domain }}
+      when: ssl_setup | default(false)
+
+    - name: 🔄 Reload Nginx after SSL
+      systemd:
+        name: nginx
+        state: reloaded
+      when: ssl_setup | default(false)
+
+    - name: 🏥 Health check
+      uri:
+        url: "http://{{ domain }}/health"
+        method: GET
+        status_code: 200
+      register: health_check
+      retries: 5
+      delay: 10
+
+    - name: ✅ Deployment completed
+      debug:
+        msg: "KDS Assurance deployed successfully on {{ domain }}"

@@ -1,0 +1,105 @@
+services:
+  # Backend Laravel
+  - type: web
+    name: kds-assurance-backend
+    env: docker
+    dockerfilePath: ./backend/Dockerfile
+    dockerContext: ./backend
+    plan: starter
+    region: oregon
+    branch: main
+    buildCommand: |
+      composer install --no-dev --optimize-autoloader
+      php artisan key:generate
+      php artisan config:cache
+      php artisan route:cache
+      php artisan view:cache
+    startCommand: php artisan serve --host=0.0.0.0 --port=$PORT
+    healthCheckPath: /health
+    envVars:
+      - key: APP_ENV
+        value: production
+      - key: APP_DEBUG
+        value: false
+      - key: APP_NAME
+        value: KDS Assurance
+      - key: DB_CONNECTION
+        fromDatabase:
+          name: kds-assurance-db
+          property: connectionString
+      - key: DB_HOST
+        fromDatabase:
+          name: kds-assurance-db
+          property: host
+      - key: DB_DATABASE
+        fromDatabase:
+          name: kds-assurance-db
+          property: database
+      - key: DB_USERNAME
+        fromDatabase:
+          name: kds-assurance-db
+          property: user
+      - key: DB_PASSWORD
+        fromDatabase:
+          name: kds-assurance-db
+          property: password
+      - key: REDIS_URL
+        fromService:
+          type: redis
+          name: kds-assurance-redis
+          property: connectionString
+      - key: MAIL_MAILER
+        value: smtp
+      - key: MAIL_HOST
+        value: smtp.gmail.com
+      - key: MAIL_PORT
+        value: 587
+      - key: MAIL_USERNAME
+        value: kdsassur@gmail.com
+      - key: MAIL_PASSWORD
+        value: drta mgti ioxp hwwo
+      - key: MAIL_ENCRYPTION
+        value: tls
+      - key: MAIL_FROM_ADDRESS
+        value: kdsassur@gmail.com
+      - key: MAIL_FROM_NAME
+        value: KDS Assurance
+      - key: CACHE_DRIVER
+        value: redis
+      - key: SESSION_DRIVER
+        value: redis
+      - key: QUEUE_CONNECTION
+        value: redis
+
+  # Frontend Angular
+  - type: web
+    name: kds-assurance-frontend
+    env: docker
+    dockerfilePath: ./frontend/Dockerfile
+    dockerContext: ./frontend
+    plan: starter
+    region: oregon
+    branch: main
+    buildCommand: |
+      npm ci
+      npm run build
+    startCommand: nginx -g 'daemon off;'
+    envVars:
+      - key: API_URL
+        fromService:
+          type: web
+          name: kds-assurance-backend
+          envVarKey: RENDER_EXTERNAL_URL
+
+databases:
+  # MySQL Database
+  - name: kds-assurance-db
+    plan: starter
+    region: oregon
+    databaseName: kds_assurance
+    user: kds_user
+
+  # Redis Cache
+  - name: kds-assurance-redis
+    plan: starter
+    region: oregon

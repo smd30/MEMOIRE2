@@ -1,0 +1,85 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: laravel-config
+  namespace: kds-assurance
+data:
+  APP_ENV: production
+  APP_DEBUG: "false"
+  APP_NAME: "KDS Assurance"
+  APP_URL: "https://kds-assurance.com"
+  
+  # Database Configuration
+  DB_CONNECTION: mysql
+  DB_HOST: mysql-service
+  DB_PORT: "3306"
+  DB_DATABASE: kds_assurance
+  DB_USERNAME: kds_user
+  
+  # Redis Configuration
+  REDIS_HOST: redis-service
+  REDIS_PORT: "6379"
+  REDIS_PASSWORD: ""
+  
+  # Mail Configuration
+  MAIL_MAILER: smtp
+  MAIL_HOST: smtp.gmail.com
+  MAIL_PORT: "587"
+  MAIL_USERNAME: kdsassur@gmail.com
+  MAIL_ENCRYPTION: tls
+  MAIL_FROM_ADDRESS: kdsassur@gmail.com
+  MAIL_FROM_NAME: "KDS Assurance"
+  
+  # Cache Configuration
+  CACHE_DRIVER: redis
+  SESSION_DRIVER: redis
+  QUEUE_CONNECTION: redis
+  
+  # Logging
+  LOG_CHANNEL: stack
+  LOG_LEVEL: info
+  
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: nginx-config
+  namespace: kds-assurance
+data:
+  nginx.conf: |
+    events {
+        worker_connections 1024;
+    }
+    
+    http {
+        upstream laravel {
+            server laravel-service:80;
+        }
+        
+        upstream angular {
+            server angular-service:80;
+        }
+        
+        server {
+            listen 80;
+            server_name _;
+            
+            # Laravel API
+            location /api {
+                proxy_pass http://laravel;
+                proxy_set_header Host $host;
+                proxy_set_header X-Real-IP $remote_addr;
+                proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+                proxy_set_header X-Forwarded-Proto $scheme;
+            }
+            
+            # Angular Frontend
+            location / {
+                proxy_pass http://angular;
+                proxy_set_header Host $host;
+                proxy_set_header X-Real-IP $remote_addr;
+                proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+                proxy_set_header X-Forwarded-Proto $scheme;
+            }
+        }
+    }
