@@ -1,0 +1,58 @@
+name: Pipeline Minimal Test
+
+on:
+  push:
+    branches: [ main ]
+  pull_request:
+    branches: [ main ]
+
+jobs:
+  test-only:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      
+    - name: Setup PHP
+      uses: shivammathur/setup-php@v2
+      with:
+        php-version: '8.2'
+        extensions: mbstring, dom, fileinfo, mysql, zip, gd
+        
+    - name: Install Composer dependencies
+      run: |
+        cd backend
+        composer install --no-progress --prefer-dist
+        
+    - name: Run PHPUnit tests
+      run: |
+        cd backend
+        php artisan test
+        
+    - name: Setup Node.js
+      uses: actions/setup-node@v4
+      with:
+        node-version: '18'
+        cache: 'npm'
+        cache-dependency-path: frontend/package-lock.json
+        
+    - name: Install Frontend dependencies
+      run: |
+        cd frontend
+        npm ci
+        
+    - name: Run Frontend tests
+      run: |
+        cd frontend
+        npm run test -- --watch=false --browsers=ChromeHeadless
+        
+    - name: Build Frontend
+      run: |
+        cd frontend
+        npm run build
+        
+    - name: Test Build Success
+      run: |
+        echo "✅ All tests passed and build successful!"
+        echo "Ready for Docker Hub and SonarCloud integration."
