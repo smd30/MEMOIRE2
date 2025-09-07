@@ -12,6 +12,7 @@ use App\Http\Controllers\Api\GestionnaireController;
 use App\Http\Controllers\Api\AdminController;
 use App\Http\Controllers\Api\PaymentController;
 use App\Http\Controllers\Api\SouscriptionController;
+use App\Http\Controllers\Api\HealthController;
 
 /*
 |--------------------------------------------------------------------------
@@ -23,6 +24,10 @@ use App\Http\Controllers\Api\SouscriptionController;
 | be assigned to the "api" middleware group. Make something great!
 |
 */
+
+// Routes de santé pour Render
+Route::get('/health', [HealthController::class, 'health']);
+Route::get('/health/database', [HealthController::class, 'database']);
 
 // Routes publiques
 Route::post('/auth/register', [AuthController::class, 'register']);
