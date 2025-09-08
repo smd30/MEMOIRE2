@@ -70,6 +70,34 @@ docker-compose exec backend php artisan seed:dev          # Utilisateurs de test
 docker-compose exec backend php artisan seed:tarifs       # Tarifs (si pas d'import Excel)
 ```
 
+## 🔄 Système de Renouvellement des Contrats
+
+### Fonctionnalités
+- ✅ **Détection automatique** des contrats éligibles (30 jours avant expiration)
+- ✅ **Calcul intelligent** des primes de renouvellement
+- ✅ **Gestion des garanties** et accessoires
+- ✅ **Workflow d'approbation** pour les compagnies
+- ✅ **Suivi complet** des renouvellements
+- ✅ **Statistiques détaillées** et reporting
+
+### API Endpoints
+```bash
+# Renouvellement des contrats
+GET    /api/contract-renewals                    # Liste des renouvellements
+POST   /api/contract-renewals                    # Créer une demande
+GET    /api/contract-renewals/eligible-contracts # Contrats éligibles
+POST   /api/contract-renewals/calculate-premium  # Calculer la prime
+GET    /api/contract-renewals/statistics         # Statistiques
+GET    /api/contract-renewals/{id}               # Détails
+PUT    /api/contract-renewals/{id}               # Modifier
+DELETE /api/contract-renewals/{id}                # Supprimer
+POST   /api/contract-renewals/{id}/approve       # Approuver
+POST   /api/contract-renewals/{id}/reject        # Rejeter
+```
+
+### Documentation
+Voir le guide complet : `backend/RENOUVELLEMENT-CONTRATS-GUIDE.md`
+
 ## 🧪 Tests
 
 ### Backend

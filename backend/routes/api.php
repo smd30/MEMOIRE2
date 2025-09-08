@@ -13,6 +13,7 @@ use App\Http\Controllers\Api\AdminController;
 use App\Http\Controllers\Api\PaymentController;
 use App\Http\Controllers\Api\SouscriptionController;
 use App\Http\Controllers\Api\HealthController;
+use App\Http\Controllers\Api\ContractRenewalController;
 
 /*
 |--------------------------------------------------------------------------
@@ -306,6 +307,20 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::put('/payments/{payment}', [PaymentController::class, 'update']);
     Route::delete('/payments/{payment}', [PaymentController::class, 'destroy']);
     Route::post('/payments/simulate', [PaymentController::class, 'simulate']);
+
+    // Renouvellement des contrats
+    Route::prefix('contract-renewals')->group(function () {
+        Route::get('/', [ContractRenewalController::class, 'index']);
+        Route::post('/', [ContractRenewalController::class, 'store']);
+        Route::get('/eligible-contracts', [ContractRenewalController::class, 'getEligibleContracts']);
+        Route::post('/calculate-premium', [ContractRenewalController::class, 'calculateRenewalPremium']);
+        Route::get('/statistics', [ContractRenewalController::class, 'getStatistics']);
+        Route::get('/{id}', [ContractRenewalController::class, 'show']);
+        Route::put('/{id}', [ContractRenewalController::class, 'update']);
+        Route::delete('/{id}', [ContractRenewalController::class, 'destroy']);
+        Route::post('/{id}/approve', [ContractRenewalController::class, 'approve']);
+        Route::post('/{id}/reject', [ContractRenewalController::class, 'reject']);
+    });
 
     // Routes Gestionnaire
     Route::prefix('gestionnaires')->group(function () {
