@@ -31,6 +31,9 @@ RUN chown -R www-data:www-data /var/www \
     && chmod -R 755 /var/www/bootstrap/cache \
     && chmod +x /var/www/start-render.sh
 
+# Créer le fichier .env depuis .env.example
+RUN cp .env.example .env
+
 # Exposer le port 9000 (PHP-FPM)
 EXPOSE 9000
 

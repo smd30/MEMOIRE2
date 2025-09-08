@@ -4,8 +4,13 @@
 echo "🚀 Démarrage de l'application MEMOIRE2 sur Render..."
 
 # Générer la clé d'application si elle n'existe pas
-if [ -z "$APP_KEY" ]; then
-    echo "🔑 Génération de la clé d'application..."
+echo "🔑 Génération de la clé d'application..."
+php artisan key:generate --force
+
+# Créer le fichier .env si nécessaire
+if [ ! -f .env ]; then
+    echo "📝 Création du fichier .env..."
+    cp .env.example .env
     php artisan key:generate --force
 fi
 
