@@ -1,4 +1,4 @@
-name: Pipeline Docker Hub Direct (DISABLED - Configure secrets first)
+name: Pipeline Docker Hub Direct (DISABLED - Use complete-pipeline.yml)
 
 on:
   workflow_dispatch:

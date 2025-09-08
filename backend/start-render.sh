@@ -14,6 +14,11 @@ if [ ! -f .env ]; then
     php artisan key:generate --force
 fi
 
+# Configurer PostgreSQL
+echo "🐘 Configuration PostgreSQL..."
+sed -i 's/DB_CONNECTION=mysql/DB_CONNECTION=pgsql/' .env
+sed -i 's/DB_PORT=3306/DB_PORT=5432/' .env
+
 # Exécuter les migrations
 echo "🗄️ Exécution des migrations..."
 php artisan migrate --force

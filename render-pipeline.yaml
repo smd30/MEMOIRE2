@@ -1,0 +1,94 @@
+services:
+  # Backend Laravel pour Render - Pipeline DevOps
+  - type: web
+    name: memoire2-backend-pipeline
+    env: docker
+    dockerfilePath: ./backend/Dockerfile.pipeline
+    dockerContext: ./backend
+    plan: starter
+    region: oregon
+    branch: main
+    buildCommand: |
+      composer install --no-dev --optimize-autoloader
+      php artisan key:generate --force
+    startCommand: /start.sh
+    healthCheckPath: /api/health
+    envVars:
+      - key: APP_ENV
+        value: production
+      - key: APP_DEBUG
+        value: false
+      - key: APP_NAME
+        value: MEMOIRE2
+      - key: APP_URL
+        value: https://memoire2-backend-pipeline.onrender.com
+      - key: DB_CONNECTION
+        fromDatabase:
+          name: memoire2-db-pipeline
+          property: connectionString
+      - key: DB_HOST
+        fromDatabase:
+          name: memoire2-db-pipeline
+          property: host
+      - key: DB_DATABASE
+        fromDatabase:
+          name: memoire2-db-pipeline
+          property: database
+      - key: DB_USERNAME
+        fromDatabase:
+          name: memoire2-db-pipeline
+          property: user
+      - key: DB_PASSWORD
+        fromDatabase:
+          name: memoire2-db-pipeline
+          property: password
+      - key: MAIL_MAILER
+        value: smtp
+      - key: MAIL_HOST
+        value: smtp.gmail.com
+      - key: MAIL_PORT
+        value: 587
+      - key: MAIL_USERNAME
+        value: kdsassur@gmail.com
+      - key: MAIL_PASSWORD
+        value: drta mgti ioxp hwwo
+      - key: MAIL_ENCRYPTION
+        value: tls
+      - key: MAIL_FROM_ADDRESS
+        value: kdsassur@gmail.com
+      - key: MAIL_FROM_NAME
+        value: MEMOIRE2
+      - key: CACHE_DRIVER
+        value: file
+      - key: SESSION_DRIVER
+        value: file
+      - key: QUEUE_CONNECTION
+        value: sync
+
+  # Frontend Angular pour Render - Pipeline DevOps
+  - type: web
+    name: memoire2-frontend-pipeline
+    env: docker
+    dockerfilePath: ./frontend/Dockerfile.pipeline
+    dockerContext: ./frontend
+    plan: starter
+    region: oregon
+    branch: main
+    buildCommand: |
+      npm ci
+      npm run build
+    startCommand: /start.sh
+    envVars:
+      - key: API_URL
+        fromService:
+          type: web
+          name: memoire2-backend-pipeline
+          envVarKey: RENDER_EXTERNAL_URL
+
+databases:
+  # PostgreSQL Database pour Pipeline
+  - name: memoire2-db-pipeline
+    plan: starter
+    region: oregon
+    databaseName: memoire2_pipeline
+    user: memoire2_pipeline_user

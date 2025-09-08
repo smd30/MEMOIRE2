@@ -1,0 +1,43 @@
+# Dockerfile ultra-simple pour Render
+FROM php:8.2-fpm
+
+# Installer les dépendances système minimales
+RUN apt-get update && apt-get install -y \
+    git \
+    curl \
+    libpng-dev \
+    libonig-dev \
+    libxml2-dev \
+    libzip-dev \
+    zip \
+    unzip \
+    && docker-php-ext-install pdo_mysql mbstring exif pcntl bcmath gd zip
+
+# Installer Composer
+COPY --from=composer:latest /usr/bin/composer /usr/bin/composer
+
+# Définir le répertoire de travail
+WORKDIR /var/www
+
+# Copier le code source
+COPY . /var/www
+
+# Installer les dépendances PHP
+RUN composer install --no-dev --optimize-autoloader
+
+# Créer le fichier .env depuis .env.example
+RUN cp .env.example .env
+
+# Générer la clé d'application
+RUN php artisan key:generate --force
+
+# Configurer les permissions
+RUN chown -R www-data:www-data /var/www \
+    && chmod -R 755 /var/www/storage \
+    && chmod -R 755 /var/www/bootstrap/cache
+
+# Exposer le port 9000 (PHP-FPM)
+EXPOSE 9000
+
+# Démarrer PHP-FPM directement
+CMD ["php-fpm"]
